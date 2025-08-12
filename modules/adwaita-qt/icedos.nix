@@ -7,6 +7,7 @@
       (
         {
           config,
+          icedosLib,
           lib,
           pkgs,
           ...
@@ -15,7 +16,12 @@
         let
           inherit (lib) mapAttrs;
           cfg = config.icedos;
-          accentColor = cfg.internals.accentColor;
+
+          accentColor = icedosLib.generateAccentColor {
+            accentColor = cfg.desktop.accentColor;
+            gnomeAccentColor = cfg.desktop.gnomeAccentColor;
+            hasGnome = cfg.desktop.gnome.enable;
+          };
 
           accentColorPatch = ''
             diff --git a/src/lib/stylesheet/processed/Adwaita-dark.css b/src/lib/stylesheet/processed/Adwaita-dark.css
