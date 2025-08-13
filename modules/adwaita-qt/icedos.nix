@@ -19,8 +19,8 @@
 
           accentColor = icedosLib.generateAccentColor {
             accentColor = cfg.desktop.accentColor;
-            gnomeAccentColor = cfg.desktop.gnomeAccentColor;
-            hasGnome = cfg.desktop.gnome.enable;
+            gnomeAccentColor = cfg.desktop.gnome.accentColor;
+            hasGnome = lib.hasAttr "gnome" cfg.desktop;
           };
 
           accentColorPatch = ''
@@ -118,7 +118,7 @@
               ".config/qt5ct/qt5ct.conf".source = ./qt5ct.conf;
               ".config/qt6ct/qt6ct.conf".source = ./qt6ct.conf;
             };
-          }) cfg.system.users;
+          }) cfg.users;
         }
       )
     ];

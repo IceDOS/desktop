@@ -1,5 +1,3 @@
 [icedos.desktop]
 accentColor = "7E57C2" # With gnome enabled this is getting overriden by gnome's selected accent color hex code
-
-[icedos.desktop.autologin]
-user = "username"
+autologinUser = "username"

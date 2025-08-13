@@ -7,12 +7,37 @@
 {
   options.icedos.desktop =
     let
-      inherit (icedosLib) mkStrOption;
+      inherit (icedosLib)
+        mkBoolOption
+        mkNumberOption
+        mkStrOption
+        mkSubmoduleAttrsOption
+        ;
+
       accentColor = (fromTOML (lib.fileContents ./config.toml)).icedos.desktop.accentColor;
     in
     {
       accentColor = mkStrOption { default = accentColor; };
-      autologin.user = mkStrOption { default = ""; };
+      autologinUser = mkStrOption { default = null; };
+
+      users = mkSubmoduleAttrsOption { default = { }; } {
+        idle = {
+          lock = {
+            enable = mkBoolOption { default = true; };
+            seconds = mkNumberOption { default = 180; };
+          };
+
+          disableMonitors = {
+            enable = mkBoolOption { default = true; };
+            seconds = mkNumberOption { default = 900; };
+          };
+
+          suspend = {
+            enable = mkBoolOption { default = true; };
+            seconds = mkNumberOption { default = 1800; };
+          };
+        };
+      };
     };
 
   outputs.nixosModules =
@@ -27,13 +52,13 @@
         }:
 
         let
-          inherit (lib) mapAttrs mkIf;
+          inherit (lib) mapAttrs;
           cfg = config.icedos;
 
           accentColor = icedosLib.generateAccentColor {
             accentColor = cfg.desktop.accentColor;
-            gnomeAccentColor = cfg.desktop.gnomeAccentColor;
-            hasGnome = cfg.desktop.gnome.enable;
+            gnomeAccentColor = cfg.desktop.gnome.accentColor;
+            hasGnome = lib.hasAttr "gnome" cfg.desktop;
           };
 
           audioPlayer = "io.bassi.Amberol.desktop";
@@ -84,10 +109,7 @@
             extraLocaleSettings.LC_MEASUREMENT = "es_ES.UTF-8";
           };
 
-          services.displayManager.autoLogin = mkIf (!cfg.applications.steam.session.autoStart.enable) {
-            enable = true;
-            user = cfg.desktop.autologin.user;
-          };
+          services.displayManager.autoLogin.user = cfg.desktop.autologinUser;
 
           xdg.portal.config.common.default = "*";
 
@@ -187,7 +209,7 @@
 
               file.".config/gtk-4.0/gtk.css".text = gtkCss;
             };
-          }) cfg.system.users;
+          }) cfg.users;
         }
       )
     ];

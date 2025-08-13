@@ -14,6 +14,7 @@
         let
           inherit (lib)
             concatMapStrings
+            hasAttr
             head
             mapAttrs
             mkIf
@@ -23,8 +24,8 @@
 
           cfg = config.icedos;
           command = "displays";
-          gnome = cfg.desktop.gnome.enable;
-          hyprland = cfg.desktop.hyprland.enable;
+          gnome = hasAttr "gnome" cfg.desktop;
+          hyprland = hasAttr "hyprland" cfg.desktop;
           tempConfigPath = "/tmp/icedos";
           primaryDisplayPath = "${tempConfigPath}/primary-display";
         in
@@ -59,7 +60,7 @@
                     }
                   )
                 ]
-                ++ optional (cfg.desktop.hyprland.enable) (
+                ++ optional hyprland (
                   let
                     command = "xprimary";
                   in
@@ -124,7 +125,7 @@
           ];
 
           home-manager.users = mapAttrs (user: _: {
-            systemd.user.services.xprimary = mkIf (cfg.desktop.hyprland.enable) {
+            systemd.user.services.xprimary = mkIf hyprland {
               Unit.Description = "X11 primary display watcher";
               Install.WantedBy = [
                 "graphical-session.target"
@@ -172,7 +173,7 @@
                 StartLimitBurst = 60;
               };
             };
-          }) cfg.system.users;
+          }) cfg.users;
         }
       )
     ];
