@@ -14,11 +14,11 @@
         mkSubmoduleAttrsOption
         ;
 
-      accentColor = (fromTOML (lib.fileContents ./config.toml)).icedos.desktop.accentColor;
+      desktop = (fromTOML (lib.fileContents ./config.toml)).icedos.desktop;
     in
     {
-      accentColor = mkStrOption { default = accentColor; };
-      autologinUser = mkStrOption { default = null; };
+      accentColor = mkStrOption { default = desktop.accentColor; };
+      autologinUser = mkStrOption { default = ""; };
 
       users = mkSubmoduleAttrsOption { default = { }; } {
         idle = {
@@ -52,7 +52,7 @@
         }:
 
         let
-          inherit (lib) mapAttrs;
+          inherit (lib) mapAttrs mkIf;
           cfg = config.icedos;
 
           accentColor = icedosLib.generateAccentColor {
@@ -109,7 +109,9 @@
             extraLocaleSettings.LC_MEASUREMENT = "es_ES.UTF-8";
           };
 
-          services.displayManager.autoLogin.user = cfg.desktop.autologinUser;
+          services.displayManager.autoLogin.user = mkIf (
+            cfg.desktop.autologinUser != ""
+          ) cfg.desktop.autologinUser;
 
           xdg.portal.config.common.default = "*";
 
