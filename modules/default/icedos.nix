@@ -19,6 +19,7 @@
     {
       accentColor = mkStrOption { default = desktop.accentColor; };
       autologinUser = mkStrOption { default = ""; };
+      timezone = mkStrOption { default = desktop.timezone; };
 
       users = mkSubmoduleAttrsOption { default = { }; } {
         idle = {
@@ -102,7 +103,7 @@
             nerd-fonts.jetbrains-mono
           ];
 
-          time.timeZone = "Europe/Bucharest";
+          time.timeZone = cfg.desktop.timezone;
 
           i18n = {
             defaultLocale = "en_US.UTF-8";
