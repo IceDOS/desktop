@@ -14,6 +14,7 @@
         mkSubmoduleAttrsOption
         ;
 
+      inherit (desktop.users.username) idle;
       desktop = (fromTOML (lib.fileContents ./config.toml)).icedos.desktop;
     in
     {
@@ -23,19 +24,19 @@
 
       users = mkSubmoduleAttrsOption { default = { }; } {
         idle = {
-          lock = {
-            enable = mkBoolOption { default = true; };
-            seconds = mkNumberOption { default = 180; };
+          disableMonitors = {
+            enable = mkBoolOption { default = idle.disableMonitors.enable; };
+            seconds = mkNumberOption { default = idle.disableMonitors.seconds; };
           };
 
-          disableMonitors = {
-            enable = mkBoolOption { default = true; };
-            seconds = mkNumberOption { default = 900; };
+          lock = {
+            enable = mkBoolOption { default = idle.lock.enable; };
+            seconds = mkNumberOption { default = idle.lock.seconds; };
           };
 
           suspend = {
-            enable = mkBoolOption { default = true; };
-            seconds = mkNumberOption { default = 1800; };
+            enable = mkBoolOption { default = idle.suspend.enable; };
+            seconds = mkNumberOption { default = idle.suspend.seconds; };
           };
         };
       };

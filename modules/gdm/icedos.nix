@@ -1,7 +1,15 @@
-{ icedosLib, ... }:
+{ icedosLib, lib, ... }:
 
 {
-  options.icedos.desktop.gdm.autoSuspend = icedosLib.mkBoolOption { default = true; };
+  options.icedos.desktop.gdm.autoSuspend =
+    let
+      defaultConfig =
+        let
+          inherit (lib) readFile;
+        in
+        (fromTOML (readFile ./config.toml)).icedos.desktop.gdm;
+    in
+    icedosLib.mkBoolOption { default = defaultConfig.autoSuspend; };
 
   outputs.nixosModules =
     { ... }:
@@ -13,13 +21,13 @@
         }:
 
         let
-          cfg = config.icedos;
+          inherit (config.icedos.desktop.gdm) autoSuspend;
         in
         {
           services = {
             displayManager.gdm = {
               enable = true;
-              autoSuspend = cfg.desktop.gdm.autoSuspend;
+              autoSuspend = autoSuspend;
             };
 
             xserver = {

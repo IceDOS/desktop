@@ -2,3 +2,15 @@
 accentColor = "7E57C2" # With gnome enabled this is getting overriden by gnome's selected accent color hex code
 autologinUser = "username"
 timezone = "Europe/Bucharest"
+
+[icedos.desktop.users.username.idle.disableMonitors]
+enable = true
+seconds = 180
+
+[icedos.desktop.users.username.idle.lock]
+enable = true
+seconds = 900
+
+[icedos.desktop.users.username.idle.suspend]
+enable = true
+seconds = 1800

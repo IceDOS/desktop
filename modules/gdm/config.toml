@@ -1,2 +1,2 @@
 [icedos.desktop.gdm]
-autoSuspend = false
+autoSuspend = true
