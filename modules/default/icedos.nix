@@ -100,12 +100,7 @@
             };
           };
 
-          fonts.packages = with pkgs; [
-            cantarell-fonts
-            meslo-lgs-nf
-            nerd-fonts.jetbrains-mono
-          ];
-
+          fonts.packages = with pkgs.nerd-fonts; [ jetbrains-mono ];
           time.timeZone = timezone;
 
           i18n = {
