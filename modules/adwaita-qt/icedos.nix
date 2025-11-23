@@ -14,14 +14,19 @@
         }:
 
         let
-          inherit (lib) mapAttrs;
-          cfg = config.icedos;
+          inherit (config.icedos) desktop users;
+          inherit (icedosLib) generateAccentColor;
+          inherit (lib) hasAttr mapAttrs;
 
-          accentColor = icedosLib.generateAccentColor {
-            accentColor = cfg.desktop.accentColor;
-            gnomeAccentColor = cfg.desktop.gnome.accentColor;
-            hasGnome = lib.hasAttr "gnome" cfg.desktop;
-          };
+          accentColor =
+            let
+              inherit (desktop) accentColor gnome;
+            in
+            generateAccentColor {
+              accentColor = accentColor;
+              gnomeAccentColor = gnome.accentColor;
+              hasGnome = hasAttr "gnome" desktop;
+            };
 
           accentColorPatch = ''
             diff --git a/src/lib/stylesheet/processed/Adwaita-dark.css b/src/lib/stylesheet/processed/Adwaita-dark.css
@@ -100,7 +105,14 @@
             p:
             p.overrideAttrs (
               _: old: {
-                patches = (old.patches or [ ]) ++ [ (builtins.toFile "adwaita-qt-accent.patch" accentColorPatch) ];
+                patches = (old.patches or [ ]) ++ [
+                  (
+                    let
+                      inherit (builtins) toFile;
+                    in
+                    toFile "adwaita-qt-accent.patch" accentColorPatch
+                  )
+                ];
               }
             )
           );
@@ -114,11 +126,108 @@
           ];
 
           home-manager.users = mapAttrs (user: _: {
-            home.file = {
-              ".config/qt5ct/qt5ct.conf".source = ./qt5ct.conf;
-              ".config/qt6ct/qt6ct.conf".source = ./qt6ct.conf;
-            };
-          }) cfg.users;
+            home.file =
+              let
+                force = true;
+
+                styleColors =
+                  qt6ct:
+                  let
+                    inherit (builtins) substring stringLength;
+                    accent = substring 1 (stringLength accentColor - 1) accentColor;
+                  in
+                  ''
+                    [ColorScheme]
+                    active_colors=#ffeeeeec,#ff373737,#ff515151,#ff444444,#ff1e1e1e,#ff2a2a2a,#ffeeeeec,#ffffffff,#ffeeeeec,#ff2d2d2d,#ff353535,#19000000,#ff${accent},#ffffffff,#ff${accent},#ff${accent},#ff2d2d2d,#ff000000,#b2262626,#ffffffff,#ffeeeeec${
+                      if qt6ct then ",#ff308cc6" else ""
+                    }
+
+                    disabled_colors=#ffbebebe,#ffefefef,#ffffffff,#ffcacaca,#ffbebebe,#ffb8b8b8,#ffbebebe,#ffffffff,#ffbebebe,#ffefefef,#ffefefef,#ffb1b1b1,#ff919191,#ffffffff,#ff0000ff,#ffff00ff,#fff7f7f7,#ff000000,#ffffffdc,#ff000000,#80000000${
+                      if qt6ct then ",#ff919191" else ""
+                    }
+
+                    inactive_colors=#ffeeeeec,#ff373737,#ff515151,#ff444444,#ff1e1e1e,#ff2a2a2a,#ffeeeeec,#ffffffff,#ffeeeeec,#ff2d2d2d,#ff353535,#19000000,#ff${accent},#ffffffff,#ff${accent},#ff${accent},#ff2d2d2d,#ff000000,#b2262626,#ffffffff,#ffeeeeec${
+                      if qt6ct then ",#ff308cc6" else ""
+                    }
+                  '';
+
+                qtConf =
+                  qt6ct:
+                  let
+                    colorSchemePath =
+                      if qt6ct then
+                        "color_scheme_path=/home/${user}/.config/qt6ct/style-colors.conf"
+                      else
+                        "color_scheme_path=/home/${user}/.config/qt5ct/style-colors.conf";
+
+                    fonts =
+                      if qt6ct then
+                        ''
+                          fixed="Noto Sans Mono,12,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,Regular"
+                          general="Noto Sans,12,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,Regular"
+                        ''
+                      else
+                        ''
+                          fixed="Noto Sans Mono,12,-1,5,50,0,0,0,0,0,Regular"
+                          general="Noto Sans,12,-1,5,50,0,0,0,0,0,Regular"
+                        '';
+                  in
+                  ''
+                    [Appearance]
+                    ${colorSchemePath}
+                    custom_palette=true
+                    icon_theme=Tela-black-dark
+                    standard_dialogs=default
+                    style=Adwaita-Dark
+
+                    [Fonts]
+                    ${fonts}
+
+                    [Interface]
+                    activate_item_on_single_click=1
+                    buttonbox_layout=0
+                    cursor_flash_time=1000
+                    dialog_buttons_have_icons=1
+                    double_click_interval=400
+                    gui_effects=@Invalid()
+                    keyboard_scheme=2
+                    menus_have_icons=true
+                    show_shortcuts_in_context_menus=true
+                    stylesheets=@Invalid()
+                    toolbutton_style=4
+                    underline_shortcut=1
+                    wheel_scroll_lines=3
+
+                    [SettingsWindow]
+                    geometry=@ByteArray(\x1\xd9\xd0\xcb\0\x3\0\0\xff\xff\xff\xfd\xff\xff\xff\xe2\0\0\x5\\\0\0\x4\x41\0\0\0\0\0\0\0\0\0\0\x5Y\0\0\x4>\0\0\0\0\0\0\0\0\n\xc0\0\0\0\0\0\0\0\0\0\0\x5Y\0\0\x4>)
+
+                    [Troubleshooting]
+                    force_raster_widgets=1
+                    ignored_applications=@Invalid()
+                  '';
+              in
+              {
+                ".config/qt5ct/qt5ct.conf" = {
+                  inherit force;
+                  text = qtConf false;
+                };
+
+                ".config/qt5ct/style-colors.conf" = {
+                  inherit force;
+                  text = styleColors false;
+                };
+
+                ".config/qt6ct/qt6ct.conf" = {
+                  inherit force;
+                  text = qtConf true;
+                };
+
+                ".config/qt6ct/style-colors.conf" = {
+                  inherit force;
+                  text = styleColors true;
+                };
+              };
+          }) users;
         }
       )
     ];
