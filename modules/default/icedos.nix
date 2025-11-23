@@ -89,8 +89,8 @@
               amberol # Music player
               dconf-editor # Edit gnome's dconf
               libnotify # Send desktop notifications
-              libreoffice-fresh # Office tools
               loupe # Image viewer
+              onlyoffice-desktopeditors # Office tools
             ];
 
             sessionVariables = {
@@ -223,5 +223,17 @@
       )
     ];
 
-  meta.name = "default";
+  meta = {
+    name = "default";
+
+    dependencies = [
+      {
+        modules = [
+          "adwaita-qt"
+          "clear-xdg-portals"
+          "displays"
+        ];
+      }
+    ];
+  };
 }
