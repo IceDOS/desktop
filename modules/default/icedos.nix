@@ -228,8 +228,13 @@
 
     dependencies = [
       {
+        modules = [ "adwaita-qt" ];
+      }
+    ];
+
+    optionalDependencies = [
+      {
         modules = [
-          "adwaita-qt"
           "clear-xdg-portals"
           "displays"
         ];
