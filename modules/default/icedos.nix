@@ -228,7 +228,10 @@
 
     dependencies = [
       {
-        modules = [ "adwaita-qt" ];
+        modules = [
+          "adwaita-qt"
+          "startup"
+        ];
       }
     ];
 
