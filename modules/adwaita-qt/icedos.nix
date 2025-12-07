@@ -1,6 +1,15 @@
-{ ... }:
+{ icedosLib, lib, ... }:
 
 {
+  options.icedos.desktop =
+    let
+      inherit (icedosLib) mkBoolOption;
+      desktop = (fromTOML (lib.fileContents ./config.toml)).icedos.desktop;
+    in
+    {
+      themeQt = mkBoolOption { default = desktop.themeQt; };
+    };
+
   outputs.nixosModules =
     { ... }:
     [
@@ -15,8 +24,9 @@
 
         let
           inherit (config.icedos) desktop users;
+          inherit (desktop) themeQt;
           inherit (icedosLib) generateAccentColor;
-          inherit (lib) hasAttr mapAttrs;
+          inherit (lib) hasAttr mapAttrs mkIf;
 
           accentColor =
             let
@@ -117,7 +127,7 @@
             )
           );
         in
-        {
+        mkIf themeQt {
           environment.systemPackages = with pkgs; [
             (adwaitaQtBuilder adwaita-qt)
             (adwaitaQtBuilder adwaita-qt6)
