@@ -53,7 +53,7 @@
                       Icon=kitty
                       Name=StartupScript
                       StartupWMClass=startup
-                      Terminal=true
+                      Terminal=false
                       Type=Application
                     '';
                   };
