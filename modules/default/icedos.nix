@@ -109,12 +109,51 @@
           };
 
           services.displayManager.autoLogin.user = mkIf (autologinUser != "") autologinUser;
-          xdg.portal.config.common.default = "*";
+
+          xdg = {
+            portal.config.common.default = "*";
+
+            mime = {
+              enable = true;
+
+              defaultApplications = {
+                "application/json" = editor;
+                "application/pdf" = browser;
+                "application/x-bittorrent" = "de.haeckerfelix.Fragments.desktop";
+                "application/x-ms-dos-executable" = "wine.desktop";
+                "application/x-shellscript" = editor;
+                "application/x-wine-extension-ini" = editor;
+                "application/x-zerosize" = editor;
+                "application/xhtml_xml" = browser;
+                "application/xhtml+xml" = browser;
+                "application/zip" = "org.gnome.FileRoller.desktop";
+                "audio/aac" = audioPlayer;
+                "audio/flac" = audioPlayer;
+                "audio/m4a" = audioPlayer;
+                "audio/mp3" = audioPlayer;
+                "audio/wav" = audioPlayer;
+                "image/avif" = imageViewer;
+                "image/jpeg" = imageViewer;
+                "image/png" = imageViewer;
+                "image/svg+xml" = imageViewer;
+                "text/html" = browser;
+                "text/plain" = editor;
+                "video/mp4" = videoPlayer;
+                "video/quicktime" = videoPlayer;
+                "video/x-matroska" = videoPlayer;
+                "video/x-ms-wmv" = videoPlayer;
+                "x-scheme-handler/about" = browser;
+                "x-scheme-handler/http" = browser;
+                "x-scheme-handler/https" = browser;
+                "x-scheme-handler/unknown" = browser;
+                "x-www-browser" = browser;
+              };
+            };
+          };
 
           home-manager.users =
             let
               inherit (pkgs) adw-gtk3 bibata-cursors tela-icon-theme;
-              hasCosmic = hasAttr "cosmic" desktop;
               hasCosmicGtkTheming = desktop.cosmic.appearance.gtkTheming or false;
             in
             mapAttrs (user: _: {
@@ -157,45 +196,6 @@
                   "gtk-3.0/gtk.css".force = true;
                   "gtk-4.0/gtk.css".enable = false;
                   "user-dirs.dirs".force = true;
-                }
-                // (if hasCosmic then { } else { "mimeapps.list".force = true; });
-
-                # Default apps
-                mimeApps = {
-                  enable = !hasCosmic;
-
-                  defaultApplications = {
-                    "application/json" = editor;
-                    "application/pdf" = browser;
-                    "application/x-bittorrent" = "de.haeckerfelix.Fragments.desktop";
-                    "application/x-ms-dos-executable" = "wine.desktop";
-                    "application/x-shellscript" = editor;
-                    "application/x-wine-extension-ini" = editor;
-                    "application/x-zerosize" = editor;
-                    "application/xhtml_xml" = browser;
-                    "application/xhtml+xml" = browser;
-                    "application/zip" = "org.gnome.FileRoller.desktop";
-                    "audio/aac" = audioPlayer;
-                    "audio/flac" = audioPlayer;
-                    "audio/m4a" = audioPlayer;
-                    "audio/mp3" = audioPlayer;
-                    "audio/wav" = audioPlayer;
-                    "image/avif" = imageViewer;
-                    "image/jpeg" = imageViewer;
-                    "image/png" = imageViewer;
-                    "image/svg+xml" = imageViewer;
-                    "text/html" = browser;
-                    "text/plain" = editor;
-                    "video/mp4" = videoPlayer;
-                    "video/quicktime" = videoPlayer;
-                    "video/x-matroska" = videoPlayer;
-                    "video/x-ms-wmv" = videoPlayer;
-                    "x-scheme-handler/about" = browser;
-                    "x-scheme-handler/http" = browser;
-                    "x-scheme-handler/https" = browser;
-                    "x-scheme-handler/unknown" = browser;
-                    "x-www-browser" = browser;
-                  };
                 };
 
                 userDirs = {
