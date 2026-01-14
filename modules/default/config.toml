@@ -5,7 +5,7 @@ timezone = "Europe/Bucharest"
 
 [icedos.desktop.users.username.idle.disableMonitors]
 enable = true
-seconds = 180
+seconds = 600
 
 [icedos.desktop.users.username.idle.lock]
 enable = true
