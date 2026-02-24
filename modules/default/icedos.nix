@@ -100,7 +100,14 @@
             };
           };
 
-          fonts.packages = with pkgs.nerd-fonts; [ jetbrains-mono ];
+          fonts.packages = with pkgs; [
+            nerd-fonts.jetbrains-mono
+
+            # CJK fonts are needed until this issue is fixed https://github.com/NixOS/nixpkgs/issues/463615
+            noto-fonts-cjk-sans
+            noto-fonts-cjk-serif
+          ];
+
           time.timeZone = timezone;
 
           i18n = {
