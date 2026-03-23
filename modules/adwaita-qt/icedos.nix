@@ -33,7 +33,7 @@
               inherit (desktop) accentColor gnome;
             in
             generateAccentColor {
-              accentColor = accentColor;
+              inherit accentColor;
               gnomeAccentColor = gnome.accentColor;
               hasGnome = hasAttr "gnome" desktop;
             };
