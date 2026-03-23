@@ -176,6 +176,7 @@
                 };
 
                 gtk3.extraCss = gtkCss;
+                gtk4.theme = null; # Fallback for system versions lower than 26.05
               };
 
               dconf.settings = {
@@ -195,7 +196,6 @@
                 configFile = {
                   "gtk-3.0/gtk.css".force = true;
                   "gtk-3.0/settings.ini".force = true;
-                  "gtk-4.0/gtk.css".enable = false;
                   "gtk-4.0/settings.ini".force = true;
                   "user-dirs.dirs".force = true;
                 };
@@ -203,6 +203,7 @@
                 userDirs = {
                   enable = true;
                   createDirectories = true;
+                  setSessionVariables = false; # Fallback for system version lower than 26.05
                 };
               };
 
