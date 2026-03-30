@@ -4,10 +4,11 @@
   options.icedos.desktop =
     let
       inherit (icedosLib) mkBoolOption;
-      desktop = (fromTOML (lib.fileContents ./config.toml)).icedos.desktop;
+      inherit (lib) readFile;
+      inherit ((fromTOML (readFile ./config.toml)).icedos.desktop) themeQt;
     in
     {
-      themeQt = mkBoolOption { default = desktop.themeQt; };
+      themeQt = mkBoolOption { default = themeQt; };
     };
 
   outputs.nixosModules =

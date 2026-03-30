@@ -1,6 +1,6 @@
 [icedos.desktop]
 accentColor = "B067FD" # With gnome enabled this is getting overriden by gnome's selected accent color hex code
-autologinUser = "username"
+autologinUser = ""
 timezone = "Europe/Bucharest"
 
 [icedos.desktop.users.username.idle.disableMonitors]

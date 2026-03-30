@@ -15,6 +15,8 @@
         {
           icedos.applications.toolset.commands = [
             {
+              inherit command;
+
               bin = "${pkgs.writeShellScript command ''
                 PORTAL="xdg-desktop-portal"
 
@@ -24,7 +26,6 @@
                 sudo rm -rf "/usr/share/$PORTAL"
               ''}";
 
-              command = command;
               help = "remove all xdg portal files, useful if portals are malfunctioning";
             }
           ];

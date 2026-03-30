@@ -14,13 +14,21 @@
         mkSubmoduleAttrsOption
         ;
 
-      inherit (desktop.users.username) idle;
-      desktop = (fromTOML (lib.fileContents ./config.toml)).icedos.desktop;
+      inherit (lib) readFile;
+
+      inherit ((fromTOML (readFile ./config.toml)).icedos.desktop)
+        accentColor
+        autologinUser
+        timezone
+        users
+        ;
+
+      inherit (users.username) idle;
     in
     {
-      accentColor = mkStrOption { default = desktop.accentColor; };
-      autologinUser = mkStrOption { default = ""; };
-      timezone = mkStrOption { default = desktop.timezone; };
+      accentColor = mkStrOption { default = accentColor; };
+      autologinUser = mkStrOption { default = autologinUser; };
+      timezone = mkStrOption { default = timezone; };
 
       users = mkSubmoduleAttrsOption { default = { }; } {
         idle = {

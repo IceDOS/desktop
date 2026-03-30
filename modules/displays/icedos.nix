@@ -40,23 +40,24 @@
                       command = "info";
                     in
                     {
+                      inherit command;
+
                       bin = "${pkgs.writeShellScript command ''
                         ${
-                          if (gnome) then
+                          if gnome then
                             ''[ "$XDG_CURRENT_DESKTOP" = "GNOME" ] && "${pkgs.gnome-randr}/bin/gnome-randr"''
                           else
                             ""
                         }
 
                         ${
-                          if (hyprland) then
+                          if hyprland then
                             ''[ "$XDG_CURRENT_DESKTOP" = "Hyprland" ] && "${pkgs.hyprland}/bin/hyprctl" monitors''
                           else
                             ""
                         }
                       ''}";
 
-                      command = command;
                       help = "print displays information";
                     }
                   )
@@ -66,6 +67,8 @@
                     command = "xprimary";
                   in
                   {
+                    inherit command;
+
                     bin = "${pkgs.writeShellScript command ''
                       [ "$XDG_CURRENT_DESKTOP" = "GNOME" ] && echo "error: not supported by gnome" && exit 1
 
@@ -82,14 +85,15 @@
                       done
                     ''}";
 
-                    command = command;
                     help = "set primary monitor for xwayland";
                   }
                 );
 
-                purpleString = string: ''''${PURPLE}${string}''${NC}'';
+                purpleString = string: "\${PURPLE}${string}\${NC}";
               in
               {
+                inherit command;
+
                 bin = "${pkgs.writeShellScript command ''
 
                   PURPLE='\033[0;35m'
@@ -100,7 +104,7 @@
 
                     ${concatMapStrings (tool: ''
                       echo -e "> ${purpleString tool.command}: ${tool.help} "
-                    '') (sort (a: b: a.command < b.command) (commands))}
+                    '') (sort (a: b: a.command < b.command) commands)}
 
                     exit 0
                   fi
@@ -119,7 +123,6 @@
                   esac
                 ''}";
 
-                command = command;
                 help = "print displays related commands";
               }
             )
@@ -129,7 +132,13 @@
             systemd.user.services.xprimary =
               mkIf (hyprland && hasAttr "monitors" cfg.hardware && (length cfg.hardware.monitors) != 0)
                 {
-                  Unit.Description = "X11 primary display watcher";
+
+                  Unit = {
+                    Description = "X11 primary display watcher";
+                    StartLimitIntervalSec = 60;
+                    StartLimitBurst = 60;
+                  };
+
                   Install.WantedBy = [
                     "graphical-session.target"
                     "hyprland-session.target"
@@ -172,8 +181,6 @@
 
                     Nice = "-20";
                     Restart = "on-failure";
-                    StartLimitIntervalSec = 60;
-                    StartLimitBurst = 60;
                   };
                 };
           }) cfg.users;
