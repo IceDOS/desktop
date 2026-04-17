@@ -1,8 +1,6 @@
-{ icedosLib, ... }:
+{ ... }:
 
 {
-  options.icedos.desktop.cosmic-greeter = icedosLib.mkBoolOption { default = true; };
-
   outputs.nixosModules =
     { ... }:
     [
@@ -15,10 +13,12 @@
 
         let
           inherit (icedosLib) abortIf;
-          inherit (config.services.displayManager) gdm;
+          inherit (config.services.displayManager) gdm sddm;
         in
         {
-          services.displayManager.cosmic-greeter.enable = abortIf (gdm.enable) ''GDM is enabled – this configuration is incompatible with the cosmic greeter. Please remove "gdm" from the modules list of the desktop repository!'';
+          services.displayManager.cosmic-greeter.enable = abortIf (
+            gdm.enable || sddm.enable
+          ) "More than one display managers are setup, please use only one!";
         }
       )
     ];
