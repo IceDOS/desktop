@@ -104,7 +104,7 @@
             sessionVariables = {
               NIXOS_OZONE_WL = 1;
               QT_QPA_PLATFORM = "wayland;xcb";
-              QT_QPA_PLATFORMTHEME = "qt5ct";
+              QT_QPA_PLATFORMTHEME = mkIf (!config.services.desktopManager.plasma6.enable) "qt5ct";
             };
           };
 

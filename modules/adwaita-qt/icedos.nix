@@ -128,7 +128,7 @@
             )
           );
         in
-        mkIf themeQt {
+        mkIf (themeQt && !config.services.desktopManager.plasma6.enable) {
           environment.systemPackages = with pkgs; [
             (adwaitaQtBuilder adwaita-qt)
             (adwaitaQtBuilder adwaita-qt6)
