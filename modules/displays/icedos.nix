@@ -13,18 +13,15 @@
 
         let
           inherit (lib)
-            concatMapStrings
             hasAttr
             head
             length
             mapAttrs
             mkIf
             optional
-            sort
             ;
 
           cfg = config.icedos;
-          command = "displays";
           gnome = hasAttr "gnome" cfg.desktop;
           hyprland = hasAttr "hyprland" cfg.desktop;
           tempConfigPath = "/tmp/icedos";
@@ -32,100 +29,50 @@
         in
         {
           icedos.applications.toolset.commands = mkIf (gnome || hyprland) [
-            (
-              let
-                commands = [
-                  (
-                    let
-                      command = "info";
-                    in
-                    {
-                      inherit command;
-
-                      bin = "${pkgs.writeShellScript command ''
-                        ${
-                          if gnome then
-                            ''[ "$XDG_CURRENT_DESKTOP" = "GNOME" ] && "${pkgs.gnome-randr}/bin/gnome-randr"''
-                          else
-                            ""
-                        }
-
-                        ${
-                          if hyprland then
-                            ''[ "$XDG_CURRENT_DESKTOP" = "Hyprland" ] && "${pkgs.hyprland}/bin/hyprctl" monitors''
-                          else
-                            ""
-                        }
-                      ''}";
-
-                      help = "print displays information";
+            {
+              command = "displays";
+              help = "print displays related commands";
+              commands = [
+                {
+                  command = "info";
+                  help = "print displays information";
+                  script = ''
+                    ${
+                      if gnome then
+                        ''[ "$XDG_CURRENT_DESKTOP" = "GNOME" ] && "${pkgs.gnome-randr}/bin/gnome-randr"''
+                      else
+                        ""
                     }
-                  )
-                ]
-                ++ optional hyprland (
-                  let
-                    command = "xprimary";
-                  in
-                  {
-                    inherit command;
 
-                    bin = "${pkgs.writeShellScript command ''
-                      [ "$XDG_CURRENT_DESKTOP" = "GNOME" ] && echo "error: not supported by gnome" && exit 1
+                    ${
+                      if hyprland then
+                        ''[ "$XDG_CURRENT_DESKTOP" = "Hyprland" ] && "${pkgs.hyprland}/bin/hyprctl" monitors''
+                      else
+                        ""
+                    }
+                  '';
+                }
+              ]
+              ++ optional hyprland {
+                command = "xprimary";
+                help = "set primary monitor for xwayland";
+                script = ''
+                  [ "$XDG_CURRENT_DESKTOP" = "GNOME" ] && echo "error: not supported by gnome" && exit 1
 
-                      ACTIVE_MONITORS=($(xrandr --listactivemonitors | grep '+0' | awk '{ print $4 }' | sort))
-                      TEMP_CONFIG_PATH="${tempConfigPath}"
-                      PRIMARY_DISPLAY_PATH="${primaryDisplayPath}"
+                  ACTIVE_MONITORS=($(xrandr --listactivemonitors | grep '+0' | awk '{ print $4 }' | sort))
+                  TEMP_CONFIG_PATH="${tempConfigPath}"
+                  PRIMARY_DISPLAY_PATH="${primaryDisplayPath}"
 
-                      mkdir -p "$TEMP_CONFIG_PATH"
-                      echo "Select a display:"
+                  mkdir -p "$TEMP_CONFIG_PATH"
+                  echo "Select a display:"
 
-                      select monitor in "''${ACTIVE_MONITORS[@]}"; do
-                        [ "$monitor" != "" ] && echo "$monitor" > "$PRIMARY_DISPLAY_PATH" && exit 0
-                        echo "error: not a valid selection, try again"
-                      done
-                    ''}";
-
-                    help = "set primary monitor for xwayland";
-                  }
-                );
-
-                purpleString = string: "\${PURPLE}${string}\${NC}";
-              in
-              {
-                inherit command;
-
-                bin = "${pkgs.writeShellScript command ''
-
-                  PURPLE='\033[0;35m'
-                  NC='\033[0m'
-
-                  if [[ "$1" == "" || "$1" == "help" ]]; then
-                    echo "Available commands:"
-
-                    ${concatMapStrings (tool: ''
-                      echo -e "> ${purpleString tool.command}: ${tool.help} "
-                    '') (sort (a: b: a.command < b.command) commands)}
-
-                    exit 0
-                  fi
-
-                  case "$1" in
-                    ${concatMapStrings (tool: ''
-                      ${tool.command})
-                        shift
-                        exec ${tool.bin} "$@"
-                        ;;
-                    '') commands}
-                    *|-*|--*)
-                      echo "Unknown arg: $1" >&2
-                      exit 1
-                      ;;
-                  esac
-                ''}";
-
-                help = "print displays related commands";
-              }
-            )
+                  select monitor in "''${ACTIVE_MONITORS[@]}"; do
+                    [ "$monitor" != "" ] && echo "$monitor" > "$PRIMARY_DISPLAY_PATH" && exit 0
+                    echo "error: not a valid selection, try again"
+                  done
+                '';
+              };
+            }
           ];
 
           home-manager.users = mapAttrs (user: _: {
