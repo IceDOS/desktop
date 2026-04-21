@@ -164,72 +164,91 @@
               inherit (pkgs) adw-gtk3 bibata-cursors tela-icon-theme;
               hasCosmicGtkTheming = desktop.cosmic.appearance.gtkTheming or false;
             in
-            mapAttrs (user: _: {
-              gtk = {
-                enable = true;
-
-                theme = {
-                  name = "adw-gtk3-dark";
-                  package = adw-gtk3;
-                };
-
-                cursorTheme = {
-                  name = "Bibata-Modern-Classic";
-                  package = bibata-cursors;
-                };
-
-                iconTheme = {
-                  name = "Tela-black-dark";
-                  package = tela-icon-theme;
-                };
-
-                gtk3.extraCss = gtkCss;
-                gtk4.theme = null; # Fallback for system versions lower than 26.05
-              };
-
-              dconf.settings = {
-                # Enable dark mode
-                "org/gnome/desktop/interface".color-scheme = "prefer-dark";
-
-                # GTK file picker
-                "org/gtk/settings/file-chooser" = {
-                  sort-directories-first = true;
-                  date-format = "with-time";
-                  show-type-column = false;
-                  show-hidden = true;
-                };
-              };
-
-              xdg = {
-                configFile = {
-                  "gtk-3.0/gtk.css".force = true;
-                  "gtk-3.0/settings.ini".force = true;
-                  "gtk-4.0/settings.ini".force = true;
-                  "user-dirs.dirs".force = true;
-                };
-
-                userDirs = {
+            mapAttrs (
+              user: _:
+              { config, ... }:
+              {
+                gtk = {
                   enable = true;
-                  createDirectories = true;
-                  setSessionVariables = false; # Fallback for system version lower than 26.05
-                };
-              };
 
-              home = {
-                pointerCursor = {
-                  gtk.enable = true;
-                  x11.enable = true;
-                  package = bibata-cursors;
-                  name = "Bibata-Modern-Classic";
-                  size = 24;
+                  theme = {
+                    name = "adw-gtk3-dark";
+                    package = adw-gtk3;
+                  };
+
+                  cursorTheme = {
+                    name = "Bibata-Modern-Classic";
+                    package = bibata-cursors;
+                  };
+
+                  iconTheme = {
+                    name = "Tela-black-dark";
+                    package = tela-icon-theme;
+                  };
+
+                  gtk3.extraCss = gtkCss;
+                  gtk4.theme = null; # Fallback for system versions lower than 26.05
                 };
 
-                file.".config/gtk-4.0/gtk.css" = mkIf (!hasCosmicGtkTheming) {
-                  force = true;
-                  text = gtkCss;
+                dconf.settings = {
+                  # Enable dark mode
+                  "org/gnome/desktop/interface".color-scheme = "prefer-dark";
+
+                  # GTK file picker
+                  "org/gtk/settings/file-chooser" = {
+                    sort-directories-first = true;
+                    date-format = "with-time";
+                    show-type-column = false;
+                    show-hidden = true;
+                  };
                 };
-              };
-            }) users;
+
+                xdg = {
+                  configFile = {
+                    "gtk-3.0/gtk.css".force = true;
+                    "gtk-3.0/settings.ini".force = true;
+                    "gtk-4.0/settings.ini".force = true;
+                    "user-dirs.dirs".force = true;
+                  };
+
+                  userDirs = {
+                    enable = true;
+                    createDirectories = true;
+                    setSessionVariables = true;
+                  };
+                };
+
+                # Propagate XDG user dir vars to the systemd user environment so
+                # D-Bus-activated apps (e.g. Nautilus) show them in their sidebar
+                # on non-GNOME sessions. gnome-session does this via
+                # dbus-update-activation-environment; no equivalent runs on COSMIC/Hyprland etc.
+                systemd.user.sessionVariables = {
+                  XDG_DESKTOP_DIR = config.xdg.userDirs.desktop;
+                  XDG_DOCUMENTS_DIR = config.xdg.userDirs.documents;
+                  XDG_DOWNLOAD_DIR = config.xdg.userDirs.download;
+                  XDG_MUSIC_DIR = config.xdg.userDirs.music;
+                  XDG_PICTURES_DIR = config.xdg.userDirs.pictures;
+                  XDG_PUBLICSHARE_DIR = config.xdg.userDirs.publicShare;
+                  XDG_TEMPLATES_DIR = config.xdg.userDirs.templates;
+                  XDG_VIDEOS_DIR = config.xdg.userDirs.videos;
+                };
+
+                home = {
+                  pointerCursor = {
+                    gtk.enable = true;
+                    x11.enable = true;
+                    package = bibata-cursors;
+                    name = "Bibata-Modern-Classic";
+                    size = 24;
+                  };
+
+                  file.".config/gtk-4.0/gtk.css" = mkIf (!hasCosmicGtkTheming) {
+                    force = true;
+                    text = gtkCss;
+                  };
+                };
+              }
+            ) users;
         }
       )
     ];
