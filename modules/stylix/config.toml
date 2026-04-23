@@ -1,0 +1,44 @@
+[icedos.desktop.stylix]
+enable = false
+autoEnable = true
+polarity = "dark"
+base16Scheme = "edge-dark"
+image = ""
+accentBase16Slot = "base0E"
+
+[icedos.desktop.stylix.cursorTheme]
+name = ""
+package = ""
+size = 0
+
+[icedos.desktop.stylix.iconTheme]
+enable = true
+package = "tela-icon-theme"
+dark = "Tela-black-dark"
+light = "Tela-black"
+
+[icedos.desktop.stylix.fonts.monospace]
+package = "adwaita-fonts"
+name = "Adwaita Mono"
+
+[icedos.desktop.stylix.fonts.sansSerif]
+package = "adwaita-fonts"
+name = "Adwaita Sans"
+
+[icedos.desktop.stylix.fonts.serif]
+package = "adwaita-fonts"
+name = "Adwaita Sans"
+
+[icedos.desktop.stylix.fonts.emoji]
+package = "noto-fonts-color-emoji"
+name = "Noto Color Emoji"
+
+# Per-target overrides for stylix theming. Each key matches a stylix target
+# (e.g. zed, alacritty, gtk, kitty, tmux, ...). `enable = false` disables that
+# one target even when the global `autoEnable` is true; `enable = true` does
+# the inverse. Leave empty to inherit `autoEnable` everywhere.
+#
+# Example user override (in your config.toml):
+#   [icedos.desktop.stylix.targets.zed]
+#   enable = false
+[icedos.desktop.stylix.targets]

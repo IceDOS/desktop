@@ -63,23 +63,32 @@
 
         let
           inherit (icedosLib) generateAccentColor;
-          inherit (lib) mapAttrs mkIf hasAttr;
+          inherit (lib) hasAttr mapAttrs mkIf;
           inherit (config.icedos) applications desktop users;
           inherit (applications) defaultBrowser defaultEditor;
-          inherit (desktop) autologinUser gnome timezone;
+          inherit (desktop) autologinUser timezone;
 
-          accentColor = generateAccentColor {
-            inherit (desktop) accentColor;
-            gnomeAccentColor = gnome.accentColor;
-            hasGnome = hasAttr "gnome" desktop;
-          };
+          stylixEnabled = config.stylix.enable or false;
+
+          stylixAccentSlot = config.icedos.desktop.stylix.accentBase16Slot or "base0D";
+          stylixColors = config.lib.stylix.colors or { };
+
+          accentHex =
+            if stylixEnabled then
+              "#${stylixColors.${stylixAccentSlot}}"
+            else
+              generateAccentColor {
+                inherit (desktop) accentColor;
+                gnomeAccentColor = desktop.gnome.accentColor or "blue";
+                hasGnome = hasAttr "gnome" desktop;
+              };
 
           audioPlayer = "io.bassi.Amberol.desktop";
           browser = defaultBrowser;
           editor = defaultEditor;
 
           gtkCss = ''
-            @define-color accent_bg_color ${accentColor};
+            @define-color accent_bg_color ${accentHex};
             @define-color accent_color @accent_bg_color;
 
             :root {
@@ -104,7 +113,9 @@
             sessionVariables = {
               NIXOS_OZONE_WL = 1;
               QT_QPA_PLATFORM = "wayland;xcb";
-              QT_QPA_PLATFORMTHEME = mkIf (!config.services.desktopManager.plasma6.enable) "qt5ct";
+              QT_QPA_PLATFORMTHEME = mkIf (
+                !stylixEnabled && !config.services.desktopManager.plasma6.enable
+              ) "qt5ct";
             };
           };
 
@@ -167,87 +178,95 @@
             mapAttrs (
               user: _:
               { config, ... }:
-              {
-                gtk = {
-                  enable = true;
+              lib.mkMerge [
+                {
+                  # Adopt the 26.05+ default to silence the legacy warning
+                  # regardless of stylix state; specific blocks below can override.
+                  gtk.gtk4.theme = lib.mkDefault null;
 
-                  theme = {
-                    name = "adw-gtk3-dark";
-                    package = adw-gtk3;
+                  dconf.settings = {
+                    "org/gnome/desktop/interface".color-scheme = "prefer-dark";
+
+                    "org/gtk/settings/file-chooser" = {
+                      sort-directories-first = true;
+                      date-format = "with-time";
+                      show-type-column = false;
+                      show-hidden = true;
+                    };
                   };
 
-                  cursorTheme = {
-                    name = "Bibata-Modern-Classic";
-                    package = bibata-cursors;
+                  xdg = {
+                    configFile."user-dirs.dirs".force = true;
+
+                    userDirs = {
+                      enable = true;
+                      createDirectories = true;
+                      setSessionVariables = true;
+                    };
                   };
 
-                  iconTheme = {
-                    name = "Tela-black-dark";
-                    package = tela-icon-theme;
+                  # Propagate XDG user dir vars to the systemd user environment so
+                  # D-Bus-activated apps (e.g. Nautilus) show them in their sidebar
+                  # on non-GNOME sessions. gnome-session does this via
+                  # dbus-update-activation-environment; no equivalent runs on COSMIC/Hyprland etc.
+                  systemd.user.sessionVariables = {
+                    XDG_DESKTOP_DIR = config.xdg.userDirs.desktop;
+                    XDG_DOCUMENTS_DIR = config.xdg.userDirs.documents;
+                    XDG_DOWNLOAD_DIR = config.xdg.userDirs.download;
+                    XDG_MUSIC_DIR = config.xdg.userDirs.music;
+                    XDG_PICTURES_DIR = config.xdg.userDirs.pictures;
+                    XDG_PUBLICSHARE_DIR = config.xdg.userDirs.publicShare;
+                    XDG_TEMPLATES_DIR = config.xdg.userDirs.templates;
+                    XDG_VIDEOS_DIR = config.xdg.userDirs.videos;
+                  };
+                }
+
+                (mkIf (!stylixEnabled) {
+                  gtk = {
+                    enable = true;
+
+                    theme = {
+                      name = "adw-gtk3-dark";
+                      package = adw-gtk3;
+                    };
+
+                    cursorTheme = {
+                      name = "Bibata-Modern-Classic";
+                      package = bibata-cursors;
+                    };
+
+                    iconTheme = {
+                      name = "Tela-black-dark";
+                      package = tela-icon-theme;
+                    };
+
+                    gtk3.extraCss = gtkCss;
+                    gtk4.theme = null; # Fallback for system versions lower than 26.05
                   };
 
-                  gtk3.extraCss = gtkCss;
-                  gtk4.theme = null; # Fallback for system versions lower than 26.05
-                };
-
-                dconf.settings = {
-                  # Enable dark mode
-                  "org/gnome/desktop/interface".color-scheme = "prefer-dark";
-
-                  # GTK file picker
-                  "org/gtk/settings/file-chooser" = {
-                    sort-directories-first = true;
-                    date-format = "with-time";
-                    show-type-column = false;
-                    show-hidden = true;
-                  };
-                };
-
-                xdg = {
-                  configFile = {
+                  xdg.configFile = {
                     "gtk-3.0/gtk.css".force = true;
                     "gtk-3.0/settings.ini".force = true;
                     "gtk-4.0/settings.ini".force = true;
-                    "user-dirs.dirs".force = true;
                   };
 
-                  userDirs = {
-                    enable = true;
-                    createDirectories = true;
-                    setSessionVariables = true;
-                  };
-                };
+                  home = {
+                    pointerCursor = {
+                      gtk.enable = true;
+                      x11.enable = true;
+                      package = bibata-cursors;
+                      name = "Bibata-Modern-Classic";
+                      size = 24;
+                    };
 
-                # Propagate XDG user dir vars to the systemd user environment so
-                # D-Bus-activated apps (e.g. Nautilus) show them in their sidebar
-                # on non-GNOME sessions. gnome-session does this via
-                # dbus-update-activation-environment; no equivalent runs on COSMIC/Hyprland etc.
-                systemd.user.sessionVariables = {
-                  XDG_DESKTOP_DIR = config.xdg.userDirs.desktop;
-                  XDG_DOCUMENTS_DIR = config.xdg.userDirs.documents;
-                  XDG_DOWNLOAD_DIR = config.xdg.userDirs.download;
-                  XDG_MUSIC_DIR = config.xdg.userDirs.music;
-                  XDG_PICTURES_DIR = config.xdg.userDirs.pictures;
-                  XDG_PUBLICSHARE_DIR = config.xdg.userDirs.publicShare;
-                  XDG_TEMPLATES_DIR = config.xdg.userDirs.templates;
-                  XDG_VIDEOS_DIR = config.xdg.userDirs.videos;
-                };
-
-                home = {
-                  pointerCursor = {
-                    gtk.enable = true;
-                    x11.enable = true;
-                    package = bibata-cursors;
-                    name = "Bibata-Modern-Classic";
-                    size = 24;
+                    file.".config/gtk-4.0/gtk.css" = mkIf (!hasCosmicGtkTheming) {
+                      force = true;
+                      text = gtkCss;
+                    };
                   };
+                })
 
-                  file.".config/gtk-4.0/gtk.css" = mkIf (!hasCosmicGtkTheming) {
-                    force = true;
-                    text = gtkCss;
-                  };
-                };
-              }
+              ]
             ) users;
         }
       )
@@ -261,6 +280,7 @@
         modules = [
           "adwaita-qt"
           "startup"
+          "stylix"
         ];
       }
     ];
