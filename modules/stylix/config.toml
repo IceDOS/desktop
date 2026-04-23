@@ -1,0 +1,34 @@
+[icedos.desktop.stylix]
+enable = false
+autoEnable = true
+polarity = "dark"
+base16Scheme = "edge-dark"
+image = ""
+accentBase16Slot = "base0E"
+
+[icedos.desktop.stylix.cursorTheme]
+name = ""
+package = ""
+size = 0
+
+[icedos.desktop.stylix.iconTheme]
+enable = true
+package = "tela-icon-theme"
+dark = "Tela-black-dark"
+light = "Tela-black"
+
+[icedos.desktop.stylix.fonts.monospace]
+package = ""
+name = ""
+
+[icedos.desktop.stylix.fonts.sansSerif]
+package = ""
+name = ""
+
+[icedos.desktop.stylix.fonts.serif]
+package = ""
+name = ""
+
+[icedos.desktop.stylix.fonts.emoji]
+package = ""
+name = ""

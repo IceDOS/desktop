@@ -12,7 +12,7 @@
     };
 
   outputs.nixosModules =
-    { ... }:
+    { inputs, ... }:
     [
       (
         {
@@ -27,7 +27,7 @@
           inherit (config.icedos) desktop users;
           inherit (desktop) themeQt;
           inherit (icedosLib) generateAccentColor;
-          inherit (lib) hasAttr mapAttrs mkIf;
+          inherit (lib) hasAttr mapAttrs mkIf mkMerge;
 
           accentColor =
             let
@@ -38,6 +38,35 @@
               gnomeAccentColor = gnome.accentColor;
               hasGnome = hasAttr "gnome" desktop;
             };
+
+          stylixEnabled = config.stylix.enable or false;
+          stylixColors = config.lib.stylix.colors or { };
+          stylixAccentSlot = config.icedos.desktop.stylix.accentBase16Slot or "base0D";
+          stylixAccent = "#${stylixColors.${stylixAccentSlot} or "89b4fa"}";
+
+          # Qt palette (20/21 fields). Positions 12/14/15 are Highlight/Link/LinkVisited
+          # — those are the accent slots. Parameterized so it can be called for both
+          # the stylix-on (catppuccin accent) and stylix-off (GNOME accent) paths.
+          mkStyleColors =
+            { qt6ct, accent }:
+            let
+              inherit (builtins) substring stringLength;
+              a = substring 1 (stringLength accent - 1) accent;
+            in
+            ''
+              [ColorScheme]
+              active_colors=#ffeeeeec,#ff373737,#ff515151,#ff444444,#ff1e1e1e,#ff2a2a2a,#ffeeeeec,#ffffffff,#ffeeeeec,#ff2d2d2d,#ff353535,#19000000,#ff${a},#ffffffff,#ff${a},#ff${a},#ff2d2d2d,#ff000000,#b2262626,#ffffffff,#ffeeeeec${
+                if qt6ct then ",#ff308cc6" else ""
+              }
+
+              disabled_colors=#ffbebebe,#ffefefef,#ffffffff,#ffcacaca,#ffbebebe,#ffb8b8b8,#ffbebebe,#ffffffff,#ffbebebe,#ffefefef,#ffefefef,#ffb1b1b1,#ff919191,#ffffffff,#ff0000ff,#ffff00ff,#fff7f7f7,#ff000000,#ffffffdc,#ff000000,#80000000${
+                if qt6ct then ",#ff919191" else ""
+              }
+
+              inactive_colors=#ffeeeeec,#ff373737,#ff515151,#ff444444,#ff1e1e1e,#ff2a2a2a,#ffeeeeec,#ffffffff,#ffeeeeec,#ff2d2d2d,#ff353535,#19000000,#ff${a},#ffffffff,#ff${a},#ff${a},#ff2d2d2d,#ff000000,#b2262626,#ffffffff,#ffeeeeec${
+                if qt6ct then ",#ff308cc6" else ""
+              }
+            '';
 
           accentColorPatch = ''
             diff --git a/src/lib/stylesheet/processed/Adwaita-dark.css b/src/lib/stylesheet/processed/Adwaita-dark.css
@@ -128,7 +157,9 @@
             )
           );
         in
-        mkIf (themeQt && !config.services.desktopManager.plasma6.enable) {
+        mkMerge [
+
+        (mkIf (themeQt && !config.services.desktopManager.plasma6.enable && !stylixEnabled) {
           environment.systemPackages = with pkgs; [
             (adwaitaQtBuilder adwaita-qt)
             (adwaitaQtBuilder adwaita-qt6)
@@ -141,26 +172,7 @@
               let
                 force = true;
 
-                styleColors =
-                  qt6ct:
-                  let
-                    inherit (builtins) substring stringLength;
-                    accent = substring 1 (stringLength accentColor - 1) accentColor;
-                  in
-                  ''
-                    [ColorScheme]
-                    active_colors=#ffeeeeec,#ff373737,#ff515151,#ff444444,#ff1e1e1e,#ff2a2a2a,#ffeeeeec,#ffffffff,#ffeeeeec,#ff2d2d2d,#ff353535,#19000000,#ff${accent},#ffffffff,#ff${accent},#ff${accent},#ff2d2d2d,#ff000000,#b2262626,#ffffffff,#ffeeeeec${
-                      if qt6ct then ",#ff308cc6" else ""
-                    }
-
-                    disabled_colors=#ffbebebe,#ffefefef,#ffffffff,#ffcacaca,#ffbebebe,#ffb8b8b8,#ffbebebe,#ffffffff,#ffbebebe,#ffefefef,#ffefefef,#ffb1b1b1,#ff919191,#ffffffff,#ff0000ff,#ffff00ff,#fff7f7f7,#ff000000,#ffffffdc,#ff000000,#80000000${
-                      if qt6ct then ",#ff919191" else ""
-                    }
-
-                    inactive_colors=#ffeeeeec,#ff373737,#ff515151,#ff444444,#ff1e1e1e,#ff2a2a2a,#ffeeeeec,#ffffffff,#ffeeeeec,#ff2d2d2d,#ff353535,#19000000,#ff${accent},#ffffffff,#ff${accent},#ff${accent},#ff2d2d2d,#ff000000,#b2262626,#ffffffff,#ffeeeeec${
-                      if qt6ct then ",#ff308cc6" else ""
-                    }
-                  '';
+                styleColors = qt6ct: mkStyleColors { inherit qt6ct; accent = accentColor; };
 
                 qtConf =
                   qt6ct:
@@ -239,7 +251,78 @@
                 };
               };
           }) users;
-        }
+        })
+
+        # When stylix is on:
+        #   - Stylix writes `custom_palette=true` in qt{5,6}ct.conf without a
+        #     `color_scheme_path`, so Qt falls back to its blue default QPalette.
+        #     Fix: write a palette file + point qt{5,6}ctSettings at it.
+        #   - Stylix's generated Kvantum SVG hardcodes #${base0D-hex} (blue in
+        #     catppuccin) for ~28 accent widget fills. Kvantum renders widgets
+        #     from the SVG, not the `highlight.color` key. So setting accent =
+        #     base0E alone still paints tabs/buttons/progress blue. Fix: post-
+        #     process the SVG to replace base0D-hex with the user's chosen
+        #     accent-slot hex, then override xdg.configFile."Kvantum/Base16Kvantum"
+        #     to point to the patched directory.
+        (mkIf (themeQt && !config.services.desktopManager.plasma6.enable && stylixEnabled) {
+          home-manager.users = mapAttrs (user: _: {
+            xdg.configFile = {
+              "qt5ct/colors/stylix.conf".text =
+                mkStyleColors { qt6ct = false; accent = stylixAccent; };
+              "qt6ct/colors/stylix.conf".text =
+                mkStyleColors { qt6ct = true; accent = stylixAccent; };
+
+              "Kvantum/Base16Kvantum".source =
+                let
+                  # Re-run stylix's kvantum templates ourselves. Avoids infinite
+                  # recursion from reading config.xdg.configFile from within a
+                  # definition for the same option. Stylix's `config.lib.stylix.colors`
+                  # expects a nix path for `template`, so we write the upstream
+                  # mustache content to a store path first.
+                  mustachePath = p: pkgs.writeText (baseNameOf p) (builtins.readFile p);
+                  svgMustache = mustachePath "${inputs.stylix}/modules/qt/kvantum.svg.mustache";
+                  kvconfigMustache = mustachePath "${inputs.stylix}/modules/qt/kvconfig.mustache";
+                  svgGen = config.lib.stylix.colors {
+                    template = svgMustache;
+                    extension = ".svg";
+                  };
+                  kvconfigGen = config.lib.stylix.colors {
+                    template = kvconfigMustache;
+                    extension = ".kvconfig";
+                  };
+                  base0DHex = stylixColors.base0D or "89b4fa";
+                  accentHexNoHash = stylixColors.${stylixAccentSlot} or "cba6f7";
+                  patched = pkgs.runCommandLocal "base16-kvantum-accent" { } ''
+                    mkdir -p $out
+                    cp ${kvconfigGen} $out/Base16Kvantum.kvconfig
+                    cp ${svgGen} $out/Base16Kvantum.svg
+                    chmod -R u+w $out
+                    ${pkgs.gnused}/bin/sed -i \
+                      -e 's/#${base0DHex}/#${accentHexNoHash}/g' \
+                      -e 's/#${lib.toUpper base0DHex}/#${lib.toUpper accentHexNoHash}/g' \
+                      $out/Base16Kvantum.svg
+                  '';
+                in
+                lib.mkForce "${patched}";
+            };
+
+            qt.qt5ctSettings.Appearance.color_scheme_path =
+              "/home/${user}/.config/qt5ct/colors/stylix.conf";
+            qt.qt6ctSettings.Appearance.color_scheme_path =
+              "/home/${user}/.config/qt6ct/colors/stylix.conf";
+
+            # HM's qt module sets QT_STYLE_OVERRIDE=kvantum in both
+            # home.sessionVariables AND systemd.user.sessionVariables.
+            # qt{5,6}ct warn when that env var coexists with their own
+            # `style=kvantum` config. Override both to empty so qtct owns
+            # the style choice. (Keeping qt.style.name = "kvantum" avoids
+            # stylix's "Changing config.qt.style is unsupported" warning.)
+            home.sessionVariables.QT_STYLE_OVERRIDE = lib.mkForce "";
+            systemd.user.sessionVariables.QT_STYLE_OVERRIDE = lib.mkForce "";
+          }) users;
+        })
+
+        ]
       )
     ];
 
