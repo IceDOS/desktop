@@ -24,12 +24,11 @@
         }:
 
         let
-          inherit (config.icedos) desktop users;
+          inherit (config.icedos) desktop;
           inherit (desktop) themeQt;
           inherit (icedosLib) generateAccentColor;
           inherit (lib)
             hasAttr
-            mapAttrs
             mkIf
             mkMerge
             ;
@@ -172,95 +171,100 @@
               libsForQt5.qt5ct
             ];
 
-            home-manager.users = mapAttrs (user: _: {
-              home.file =
-                let
-                  force = true;
-
-                  styleColors =
-                    qt6ct:
-                    mkStyleColors {
-                      inherit qt6ct;
-                      accent = accentColor;
-                    };
-
-                  qtConf =
-                    qt6ct:
-                    let
-                      colorSchemePath =
-                        if qt6ct then
-                          "color_scheme_path=/home/${user}/.config/qt6ct/style-colors.conf"
-                        else
-                          "color_scheme_path=/home/${user}/.config/qt5ct/style-colors.conf";
-
-                      fonts =
-                        if qt6ct then
-                          ''
-                            fixed="Noto Sans Mono,12,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,Regular"
-                            general="Noto Sans,12,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,Regular"
-                          ''
-                        else
-                          ''
-                            fixed="Noto Sans Mono,12,-1,5,50,0,0,0,0,0,Regular"
-                            general="Noto Sans,12,-1,5,50,0,0,0,0,0,Regular"
-                          '';
-                    in
-                    ''
-                      [Appearance]
-                      ${colorSchemePath}
-                      custom_palette=true
-                      icon_theme=Tela-black-dark
-                      standard_dialogs=default
-                      style=Adwaita-Dark
-
-                      [Fonts]
-                      ${fonts}
-
-                      [Interface]
-                      activate_item_on_single_click=1
-                      buttonbox_layout=0
-                      cursor_flash_time=1000
-                      dialog_buttons_have_icons=1
-                      double_click_interval=400
-                      gui_effects=@Invalid()
-                      keyboard_scheme=2
-                      menus_have_icons=true
-                      show_shortcuts_in_context_menus=true
-                      stylesheets=@Invalid()
-                      toolbutton_style=4
-                      underline_shortcut=1
-                      wheel_scroll_lines=3
-
-                      [SettingsWindow]
-                      geometry=@ByteArray(\x1\xd9\xd0\xcb\0\x3\0\0\xff\xff\xff\xfd\xff\xff\xff\xe2\0\0\x5\\\0\0\x4\x41\0\0\0\0\0\0\0\0\0\0\x5Y\0\0\x4>\0\0\0\0\0\0\0\0\n\xc0\0\0\0\0\0\0\0\0\0\0\x5Y\0\0\x4>)
-
-                      [Troubleshooting]
-                      force_raster_widgets=1
-                      ignored_applications=@Invalid()
-                    '';
-                in
+            home-manager.sharedModules = [
+              (
+                { config, ... }:
                 {
-                  ".config/qt5ct/qt5ct.conf" = {
-                    inherit force;
-                    text = qtConf false;
-                  };
+                  home.file =
+                    let
+                      force = true;
 
-                  ".config/qt5ct/style-colors.conf" = {
-                    inherit force;
-                    text = styleColors false;
-                  };
+                      styleColors =
+                        qt6ct:
+                        mkStyleColors {
+                          inherit qt6ct;
+                          accent = accentColor;
+                        };
 
-                  ".config/qt6ct/qt6ct.conf" = {
-                    inherit force;
-                    text = qtConf true;
-                  };
+                      qtConf =
+                        qt6ct:
+                        let
+                          colorSchemePath =
+                            if qt6ct then
+                              "color_scheme_path=${config.home.homeDirectory}/.config/qt6ct/style-colors.conf"
+                            else
+                              "color_scheme_path=${config.home.homeDirectory}/.config/qt5ct/style-colors.conf";
 
-                  ".config/qt6ct/style-colors.conf" = {
-                    inherit force;
-                    text = styleColors true;
-                  };
-                };
-            }) users;
+                          fonts =
+                            if qt6ct then
+                              ''
+                                fixed="Noto Sans Mono,12,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,Regular"
+                                general="Noto Sans,12,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,Regular"
+                              ''
+                            else
+                              ''
+                                fixed="Noto Sans Mono,12,-1,5,50,0,0,0,0,0,Regular"
+                                general="Noto Sans,12,-1,5,50,0,0,0,0,0,Regular"
+                              '';
+                        in
+                        ''
+                          [Appearance]
+                          ${colorSchemePath}
+                          custom_palette=true
+                          icon_theme=Tela-black-dark
+                          standard_dialogs=default
+                          style=Adwaita-Dark
+
+                          [Fonts]
+                          ${fonts}
+
+                          [Interface]
+                          activate_item_on_single_click=1
+                          buttonbox_layout=0
+                          cursor_flash_time=1000
+                          dialog_buttons_have_icons=1
+                          double_click_interval=400
+                          gui_effects=@Invalid()
+                          keyboard_scheme=2
+                          menus_have_icons=true
+                          show_shortcuts_in_context_menus=true
+                          stylesheets=@Invalid()
+                          toolbutton_style=4
+                          underline_shortcut=1
+                          wheel_scroll_lines=3
+
+                          [SettingsWindow]
+                          geometry=@ByteArray(\x1\xd9\xd0\xcb\0\x3\0\0\xff\xff\xff\xfd\xff\xff\xff\xe2\0\0\x5\\\0\0\x4\x41\0\0\0\0\0\0\0\0\0\0\x5Y\0\0\x4>\0\0\0\0\0\0\0\0\n\xc0\0\0\0\0\0\0\0\0\0\0\x5Y\0\0\x4>)
+
+                          [Troubleshooting]
+                          force_raster_widgets=1
+                          ignored_applications=@Invalid()
+                        '';
+                    in
+                    {
+                      ".config/qt5ct/qt5ct.conf" = {
+                        inherit force;
+                        text = qtConf false;
+                      };
+
+                      ".config/qt5ct/style-colors.conf" = {
+                        inherit force;
+                        text = styleColors false;
+                      };
+
+                      ".config/qt6ct/qt6ct.conf" = {
+                        inherit force;
+                        text = qtConf true;
+                      };
+
+                      ".config/qt6ct/style-colors.conf" = {
+                        inherit force;
+                        text = styleColors true;
+                      };
+                    };
+                }
+              )
+            ];
           })
 
           # When stylix is on:
@@ -275,63 +279,68 @@
           #     accent-slot hex, then override xdg.configFile."Kvantum/Base16Kvantum"
           #     to point to the patched directory.
           (mkIf (themeQt && !config.services.desktopManager.plasma6.enable && stylixEnabled) {
-            home-manager.users = mapAttrs (user: _: {
-              xdg.configFile = {
-                "qt5ct/colors/stylix.conf".text = mkStyleColors {
-                  qt6ct = false;
-                  accent = stylixAccent;
-                };
-                "qt6ct/colors/stylix.conf".text = mkStyleColors {
-                  qt6ct = true;
-                  accent = stylixAccent;
-                };
-
-                "Kvantum/Base16Kvantum".source =
-                  let
-                    # Re-run stylix's kvantum templates ourselves. Avoids infinite
-                    # recursion from reading config.xdg.configFile from within a
-                    # definition for the same option. Stylix's `config.lib.stylix.colors`
-                    # expects a nix path for `template`, so we write the upstream
-                    # mustache content to a store path first.
-                    mustachePath = p: pkgs.writeText (baseNameOf p) (builtins.readFile p);
-                    svgMustache = mustachePath "${inputs.stylix}/modules/qt/kvantum.svg.mustache";
-                    kvconfigMustache = mustachePath "${inputs.stylix}/modules/qt/kvconfig.mustache";
-                    svgGen = config.lib.stylix.colors {
-                      template = svgMustache;
-                      extension = ".svg";
+            home-manager.sharedModules = [
+              (
+                { config, ... }:
+                {
+                  xdg.configFile = {
+                    "qt5ct/colors/stylix.conf".text = mkStyleColors {
+                      qt6ct = false;
+                      accent = stylixAccent;
                     };
-                    kvconfigGen = config.lib.stylix.colors {
-                      template = kvconfigMustache;
-                      extension = ".kvconfig";
+                    "qt6ct/colors/stylix.conf".text = mkStyleColors {
+                      qt6ct = true;
+                      accent = stylixAccent;
                     };
-                    base0DHex = stylixColors.base0D or "89b4fa";
-                    accentHexNoHash = stylixColors.${stylixAccentSlot} or "cba6f7";
-                    patched = pkgs.runCommandLocal "base16-kvantum-accent" { } ''
-                      mkdir -p $out
-                      cp ${kvconfigGen} $out/Base16Kvantum.kvconfig
-                      cp ${svgGen} $out/Base16Kvantum.svg
-                      chmod -R u+w $out
-                      ${pkgs.gnused}/bin/sed -i \
-                        -e 's/#${base0DHex}/#${accentHexNoHash}/g' \
-                        -e 's/#${lib.toUpper base0DHex}/#${lib.toUpper accentHexNoHash}/g' \
-                        $out/Base16Kvantum.svg
-                    '';
-                  in
-                  lib.mkForce "${patched}";
-              };
 
-              qt.qt5ctSettings.Appearance.color_scheme_path = "/home/${user}/.config/qt5ct/colors/stylix.conf";
-              qt.qt6ctSettings.Appearance.color_scheme_path = "/home/${user}/.config/qt6ct/colors/stylix.conf";
+                    "Kvantum/Base16Kvantum".source =
+                      let
+                        # Re-run stylix's kvantum templates ourselves. Avoids infinite
+                        # recursion from reading config.xdg.configFile from within a
+                        # definition for the same option. Stylix's `config.lib.stylix.colors`
+                        # expects a nix path for `template`, so we write the upstream
+                        # mustache content to a store path first.
+                        mustachePath = p: pkgs.writeText (baseNameOf p) (builtins.readFile p);
+                        svgMustache = mustachePath "${inputs.stylix}/modules/qt/kvantum.svg.mustache";
+                        kvconfigMustache = mustachePath "${inputs.stylix}/modules/qt/kvconfig.mustache";
+                        svgGen = config.lib.stylix.colors {
+                          template = svgMustache;
+                          extension = ".svg";
+                        };
+                        kvconfigGen = config.lib.stylix.colors {
+                          template = kvconfigMustache;
+                          extension = ".kvconfig";
+                        };
+                        base0DHex = stylixColors.base0D or "89b4fa";
+                        accentHexNoHash = stylixColors.${stylixAccentSlot} or "cba6f7";
+                        patched = pkgs.runCommandLocal "base16-kvantum-accent" { } ''
+                          mkdir -p $out
+                          cp ${kvconfigGen} $out/Base16Kvantum.kvconfig
+                          cp ${svgGen} $out/Base16Kvantum.svg
+                          chmod -R u+w $out
+                          ${pkgs.gnused}/bin/sed -i \
+                            -e 's/#${base0DHex}/#${accentHexNoHash}/g' \
+                            -e 's/#${lib.toUpper base0DHex}/#${lib.toUpper accentHexNoHash}/g' \
+                            $out/Base16Kvantum.svg
+                        '';
+                      in
+                      lib.mkForce "${patched}";
+                  };
 
-              # HM's qt module sets QT_STYLE_OVERRIDE=kvantum in both
-              # home.sessionVariables AND systemd.user.sessionVariables.
-              # qt{5,6}ct warn when that env var coexists with their own
-              # `style=kvantum` config. Override both to empty so qtct owns
-              # the style choice. (Keeping qt.style.name = "kvantum" avoids
-              # stylix's "Changing config.qt.style is unsupported" warning.)
-              home.sessionVariables.QT_STYLE_OVERRIDE = lib.mkForce "";
-              systemd.user.sessionVariables.QT_STYLE_OVERRIDE = lib.mkForce "";
-            }) users;
+                  qt.qt5ctSettings.Appearance.color_scheme_path = "${config.home.homeDirectory}/.config/qt5ct/colors/stylix.conf";
+                  qt.qt6ctSettings.Appearance.color_scheme_path = "${config.home.homeDirectory}/.config/qt6ct/colors/stylix.conf";
+
+                  # HM's qt module sets QT_STYLE_OVERRIDE=kvantum in both
+                  # home.sessionVariables AND systemd.user.sessionVariables.
+                  # qt{5,6}ct warn when that env var coexists with their own
+                  # `style=kvantum` config. Override both to empty so qtct owns
+                  # the style choice. (Keeping qt.style.name = "kvantum" avoids
+                  # stylix's "Changing config.qt.style is unsupported" warning.)
+                  home.sessionVariables.QT_STYLE_OVERRIDE = lib.mkForce "";
+                  systemd.user.sessionVariables.QT_STYLE_OVERRIDE = lib.mkForce "";
+                }
+              )
+            ];
           })
 
         ]

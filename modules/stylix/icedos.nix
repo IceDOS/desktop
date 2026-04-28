@@ -236,7 +236,7 @@
             (mkIf (fontSet cfg.fonts.emoji) { fonts.emoji = mkFont cfg.fonts.emoji; })
           ];
 
-          home-manager.users =
+          home-manager.sharedModules =
             let
               accentHex = "#${config.lib.stylix.colors.${cfg.accentBase16Slot}}";
               gtkCss = ''
@@ -248,20 +248,22 @@
                 }
               '';
             in
-            mapAttrs (_: _: {
-              # User-supplied home-manager-side and dual-plane targets, plus
-              # our gtk extraCss override. mkMerge is needed (not `//`) so a
-              # user-set `targets.gtk.enable = false` doesn't get clobbered by
-              # the gtk.extraCss assignment — `//` is a shallow attrset merge
-              # and would replace the whole `gtk` subtree. Stylix ignores
-              # gtk.gtk{3,4}.extraCss; using its own extraCss hook keeps
-              # libadwaita widgets on the stylix accent slot instead of
-              # libadwaita's blue.
-              stylix.targets = mkMerge [
-                hmTargets
-                { gtk.extraCss = gtkCss; }
-              ];
-            }) config.icedos.users;
+            [
+              {
+                # User-supplied home-manager-side and dual-plane targets, plus
+                # our gtk extraCss override. mkMerge is needed (not `//`) so a
+                # user-set `targets.gtk.enable = false` doesn't get clobbered by
+                # the gtk.extraCss assignment — `//` is a shallow attrset merge
+                # and would replace the whole `gtk` subtree. Stylix ignores
+                # gtk.gtk{3,4}.extraCss; using its own extraCss hook keeps
+                # libadwaita widgets on the stylix accent slot instead of
+                # libadwaita's blue.
+                stylix.targets = mkMerge [
+                  hmTargets
+                  { gtk.extraCss = gtkCss; }
+                ];
+              }
+            ];
         }
       )
     ];

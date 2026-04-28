@@ -17,49 +17,49 @@
       (
         {
           config,
-          lib,
           pkgs,
           ...
         }:
 
         let
           inherit (pkgs) writeShellScriptBin;
-          inherit (lib) mapAttrs;
-          inherit (config.icedos) desktop users;
+          inherit (config.icedos) desktop;
         in
         {
-          home-manager.users = mapAttrs (
-            user: _:
-            let
-              inherit (desktop.users.${user}) startupScript;
-            in
-            {
-              home.file =
-                let
-                  script = "icedos-startup";
-                in
-                {
-                  ".config/autostart/${script}.desktop" = {
-                    text = ''
-                      [Desktop Entry]
-                      Exec=${writeShellScriptBin script ''
-                        base_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-                        nix_system_path="/run/current-system/sw/bin"
-                        nix_user_path="''${HOME}/.nix-profile/bin"
-                        export PATH="''${base_path}:''${nix_system_path}:''${nix_user_path}:$PATH"
+          home-manager.sharedModules = [
+            (
+              { config, ... }:
+              let
+                inherit (desktop.users.${config.home.username}) startupScript;
+              in
+              {
+                home.file =
+                  let
+                    script = "icedos-startup";
+                  in
+                  {
+                    ".config/autostart/${script}.desktop" = {
+                      text = ''
+                        [Desktop Entry]
+                        Exec=${writeShellScriptBin script ''
+                          base_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+                          nix_system_path="/run/current-system/sw/bin"
+                          nix_user_path="''${HOME}/.nix-profile/bin"
+                          export PATH="''${base_path}:''${nix_system_path}:''${nix_user_path}:$PATH"
 
-                        ${startupScript}
-                      ''}/bin/${script}
-                      Icon=kitty
-                      Name=StartupScript
-                      StartupWMClass=startup
-                      Terminal=false
-                      Type=Application
-                    '';
+                          ${startupScript}
+                        ''}/bin/${script}
+                        Icon=kitty
+                        Name=StartupScript
+                        StartupWMClass=startup
+                        Terminal=false
+                        Type=Application
+                      '';
+                    };
                   };
-                };
-            }
-          ) users;
+              }
+            )
+          ];
         }
       )
     ];
