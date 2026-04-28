@@ -31,32 +31,29 @@
               { config, ... }:
               let
                 inherit (desktop.users.${config.home.username}) startupScript;
+                script = "icedos-startup";
               in
               {
-                home.file =
-                  let
-                    script = "icedos-startup";
-                  in
-                  {
-                    ".config/autostart/${script}.desktop" = {
-                      text = ''
-                        [Desktop Entry]
-                        Exec=${writeShellScriptBin script ''
-                          base_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-                          nix_system_path="/run/current-system/sw/bin"
-                          nix_user_path="''${HOME}/.nix-profile/bin"
-                          export PATH="''${base_path}:''${nix_system_path}:''${nix_user_path}:$PATH"
+                home.file = lib.mkIf (startupScript != "") {
+                  ".config/autostart/${script}.desktop" = {
+                    text = ''
+                      [Desktop Entry]
+                      Exec=${writeShellScriptBin script ''
+                        base_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+                        nix_system_path="/run/current-system/sw/bin"
+                        nix_user_path="''${HOME}/.nix-profile/bin"
+                        export PATH="''${base_path}:''${nix_system_path}:''${nix_user_path}:$PATH"
 
-                          ${startupScript}
-                        ''}/bin/${script}
-                        Icon=kitty
-                        Name=StartupScript
-                        StartupWMClass=startup
-                        Terminal=false
-                        Type=Application
-                      '';
-                    };
+                        ${startupScript}
+                      ''}/bin/${script}
+                      Icon=kitty
+                      Name=StartupScript
+                      StartupWMClass=startup
+                      Terminal=false
+                      Type=Application
+                    '';
                   };
+                };
               }
             )
           ];

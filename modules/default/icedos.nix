@@ -62,7 +62,7 @@
         }:
 
         let
-          inherit (icedosLib) generateAccentColor;
+          inherit (icedosLib) generateAccentColor genUserDefaults;
           inherit (lib) hasAttr mapAttrs mkIf;
           inherit (config.icedos) applications desktop users;
           inherit (applications) defaultBrowser defaultEditor;
@@ -100,6 +100,10 @@
           videoPlayer = "io.github.celluloid_player.Celluloid.desktop";
         in
         {
+          icedos.desktop.users = genUserDefaults {
+            users = config.icedos.users;
+          };
+
           environment = {
             systemPackages = with pkgs; [
               adwaita-icon-theme # Gtk theme
