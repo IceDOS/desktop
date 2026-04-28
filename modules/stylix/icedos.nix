@@ -126,7 +126,9 @@
 
         let
           inherit (icedosLib) generateAttrPath;
+
           inherit (lib)
+            attrNames
             filterAttrs
             hasInfix
             hasSuffix
@@ -147,6 +149,7 @@
           # a subset of keys.
           tomlDefaults = (fromTOML (readFile ./config.toml)).icedos.desktop.stylix;
           rawCfg = config.icedos.desktop.stylix;
+
           cfg = rawCfg // {
             cursorTheme = tomlDefaults.cursorTheme // rawCfg.cursorTheme;
             iconTheme = tomlDefaults.iconTheme // rawCfg.iconTheme;
@@ -203,7 +206,7 @@
           # to route each user-supplied `cfg.targets.<x>` to whichever plane(s)
           # actually declare that target, so users don't have to know which is
           # which.
-          systemTargetNames = lib.attrNames (options.stylix.targets or { });
+          systemTargetNames = attrNames (options.stylix.targets or { });
 
           bothTargetNames = [
             "gtk"

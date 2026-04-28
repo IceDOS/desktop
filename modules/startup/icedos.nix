@@ -28,13 +28,14 @@
         {
           home-manager.sharedModules = [
             (
-              { config, ... }:
+              { config, lib, ... }:
               let
+                inherit (lib) mkIf;
                 inherit (desktop.users.${config.home.username}) startupScript;
                 script = "icedos-startup";
               in
               {
-                home.file = lib.mkIf (startupScript != "") {
+                home.file = mkIf (startupScript != "") {
                   ".config/autostart/${script}.desktop" = {
                     text = ''
                       [Desktop Entry]

@@ -27,10 +27,13 @@
           inherit (config.icedos) desktop;
           inherit (desktop) themeQt;
           inherit (icedosLib) generateAccentColor;
+
           inherit (lib)
             hasAttr
+            mkForce
             mkIf
             mkMerge
+            toUpper
             ;
 
           accentColor =
@@ -320,11 +323,11 @@
                           chmod -R u+w $out
                           ${pkgs.gnused}/bin/sed -i \
                             -e 's/#${base0DHex}/#${accentHexNoHash}/g' \
-                            -e 's/#${lib.toUpper base0DHex}/#${lib.toUpper accentHexNoHash}/g' \
+                            -e 's/#${toUpper base0DHex}/#${toUpper accentHexNoHash}/g' \
                             $out/Base16Kvantum.svg
                         '';
                       in
-                      lib.mkForce "${patched}";
+                      mkForce "${patched}";
                   };
 
                   qt.qt5ctSettings.Appearance.color_scheme_path = "${config.home.homeDirectory}/.config/qt5ct/colors/stylix.conf";
@@ -336,8 +339,8 @@
                   # `style=kvantum` config. Override both to empty so qtct owns
                   # the style choice. (Keeping qt.style.name = "kvantum" avoids
                   # stylix's "Changing config.qt.style is unsupported" warning.)
-                  home.sessionVariables.QT_STYLE_OVERRIDE = lib.mkForce "";
-                  systemd.user.sessionVariables.QT_STYLE_OVERRIDE = lib.mkForce "";
+                  home.sessionVariables.QT_STYLE_OVERRIDE = mkForce "";
+                  systemd.user.sessionVariables.QT_STYLE_OVERRIDE = mkForce "";
                 }
               )
             ];

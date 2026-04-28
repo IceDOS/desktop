@@ -62,8 +62,17 @@
         }:
 
         let
-          inherit (icedosLib) generateAccentColor genUserDefaults;
-          inherit (lib) hasAttr mapAttrs mkIf;
+          inherit (icedosLib) generateAccentColor;
+          inherit (icedosLib.users) genDefaults;
+
+          inherit (lib)
+            hasAttr
+            mapAttrs
+            mkIf
+            mkDefault
+            mkMerge
+            ;
+
           inherit (config.icedos) applications desktop users;
           inherit (applications) defaultBrowser defaultEditor;
           inherit (desktop) autologinUser timezone;
@@ -100,7 +109,7 @@
           videoPlayer = "io.github.celluloid_player.Celluloid.desktop";
         in
         {
-          icedos.desktop.users = genUserDefaults {
+          icedos.desktop.users = genDefaults {
             users = config.icedos.users;
           };
 
@@ -182,7 +191,7 @@
             mapAttrs (
               user: _:
               { config, ... }:
-              lib.mkMerge [
+              mkMerge [
                 {
                   # Adopt the 26.05+ default to silence the legacy warning
                   # regardless of stylix state; specific blocks below can override.
