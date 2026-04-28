@@ -8,7 +8,7 @@
 
   options.icedos.desktop.stylix =
     let
-      inherit (icedosLib) mkBoolOption mkStrOption;
+      inherit (icedosLib) mkBoolOption mkStrListOption mkStrOption;
       inherit (lib) mkOption readFile types;
 
       inherit ((fromTOML (readFile ./config.toml)).icedos.desktop.stylix)
@@ -16,6 +16,7 @@
         autoEnable
         base16Scheme
         cursorTheme
+        disabledTargets
         enable
         fonts
         iconTheme
@@ -97,6 +98,16 @@
           targets that exist on both planes (gtk, nvf) get the value on both.
         '';
       };
+
+      disabledTargets = mkStrListOption {
+        default = disabledTargets;
+        description = ''
+          Sugar for `targets.<name>.enable = false`. Each name is expanded to a
+          full target override and routed through the same system/HM resolver
+          as `targets`. Explicit `targets.<name>` entries win on conflict, so
+          per-target overrides keep their full expressivity.
+        '';
+      };
     };
 
   outputs.nixosModules =
@@ -119,10 +130,12 @@
             filterAttrs
             hasInfix
             hasSuffix
+            listToAttrs
             mapAttrs
             mkIf
             mkMerge
             readFile
+            recursiveUpdate
             removeSuffix
             ;
 
@@ -197,11 +210,21 @@
             "nvf"
           ];
 
-          systemTargets = filterAttrs (n: _: builtins.elem n systemTargetNames) cfg.targets;
+          # `disabledTargets` is sugar; recursiveUpdate lets explicit `cfg.targets.<name>` win on conflict.
+          disabledTargetsAttrs = listToAttrs (
+            map (name: {
+              inherit name;
+              value.enable = false;
+            }) cfg.disabledTargets
+          );
+
+          mergedTargets = recursiveUpdate disabledTargetsAttrs cfg.targets;
+
+          systemTargets = filterAttrs (n: _: builtins.elem n systemTargetNames) mergedTargets;
 
           hmTargets = filterAttrs (
             n: _: !(builtins.elem n systemTargetNames) || builtins.elem n bothTargetNames
-          ) cfg.targets;
+          ) mergedTargets;
         in
         mkIf cfg.enable {
           stylix = mkMerge [

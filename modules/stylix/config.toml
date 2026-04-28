@@ -5,6 +5,7 @@ polarity = "dark"
 base16Scheme = "edge-dark"
 image = ""
 accentBase16Slot = "base0E"
+disabledTargets = []
 
 [icedos.desktop.stylix.cursorTheme]
 name = ""
