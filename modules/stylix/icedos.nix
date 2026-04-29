@@ -265,12 +265,32 @@
           home-manager.sharedModules =
             let
               accentHex = "#${config.lib.stylix.colors.${cfg.accentBase16Slot}}";
+
+              accentFgHex = "#${
+                if config.stylix.polarity == "light" then
+                  config.lib.stylix.colors.base00
+                else
+                  config.lib.stylix.colors.base07
+              }";
+
               gtkCss = ''
                 @define-color accent_bg_color ${accentHex};
                 @define-color accent_color @accent_bg_color;
+                @define-color accent_fg_color ${accentFgHex};
+
+                /* Chromium reads accent foreground from these GTK treeview
+                   selectors (see chromium/src ui/gtk/gtk_color_mixers.cc).
+                   Override so chromium browsers get a
+                   contrasting label on accent buttons. */
+                treeview.view treeview.view.cell:selected:focus,
+                treeview.view treeview.view.cell:selected:focus label {
+                  background-color: ${accentHex};
+                  color: ${accentFgHex};
+                }
 
                 :root {
                   --accent-bg-color: @accent_bg_color;
+                  --accent-fg-color: @accent_fg_color;
                 }
               '';
             in

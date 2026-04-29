@@ -195,10 +195,10 @@
                 {
                   # Adopt the 26.05+ default to silence the legacy warning
                   # regardless of stylix state; specific blocks below can override.
-                  gtk.gtk4.theme = lib.mkDefault null;
+                  gtk.gtk4.theme = mkDefault null;
 
                   dconf.settings = {
-                    "org/gnome/desktop/interface".color-scheme = "prefer-dark";
+                    "org/gnome/desktop/interface".color-scheme = mkDefault "prefer-dark";
 
                     "org/gtk/settings/file-chooser" = {
                       sort-directories-first = true;
