@@ -234,6 +234,30 @@
                   };
                 }
 
+                # gnome-session populates GTK bookmarks at first login on
+                # GNOME, so the XDG dirs always show up in the nautilus / GTK
+                # file-picker sidebar. No equivalent runs on COSMIC/Hyprland,
+                # so seed the same defaults declaratively here.
+                (mkIf (!hasAttr "gnome" desktop) {
+                  xdg.configFile."gtk-3.0/bookmarks" = {
+                    force = true;
+                    text =
+                      let
+                        u = config.xdg.userDirs;
+                      in
+                      lib.concatMapStringsSep "\n" (p: "file://${p}") [
+                        u.documents
+                        u.download
+                        u.music
+                        u.pictures
+                        u.videos
+                        u.publicShare
+                        u.templates
+                      ]
+                      + "\n";
+                  };
+                })
+
                 (mkIf (!stylixEnabled) {
                   gtk = {
                     enable = true;

@@ -285,6 +285,43 @@
             home-manager.sharedModules = [
               (
                 { config, ... }:
+                let
+                  # Re-run stylix's kvantum templates ourselves so we can
+                  # post-process the SVG. Stylix's `config.lib.stylix.colors`
+                  # expects a nix path for `template`, so we write the upstream
+                  # mustache content to a store path first.
+                  mustachePath = p: pkgs.writeText (baseNameOf p) (builtins.readFile p);
+                  svgMustache = mustachePath "${inputs.stylix}/modules/qt/kvantum.svg.mustache";
+                  kvconfigMustache = mustachePath "${inputs.stylix}/modules/qt/kvconfig.mustache";
+
+                  svgGen = config.lib.stylix.colors {
+                    template = svgMustache;
+                    extension = ".svg";
+                  };
+
+                  kvconfigGen = config.lib.stylix.colors {
+                    template = kvconfigMustache;
+                    extension = ".kvconfig";
+                  };
+
+                  base0DHex = stylixColors.base0D or "89b4fa";
+                  accentHexNoHash = stylixColors.${stylixAccentSlot} or "cba6f7";
+
+                  # Match stylix's `kvantumPackage` layout
+                  # ($out/share/Kvantum/Base16Kvantum/...) so HM's qt.kvantum
+                  # module can symlinkJoin this in place of the upstream theme.
+                  patchedKvantumTheme = pkgs.runCommandLocal "base16-kvantum-accent" { } ''
+                    directory="$out/share/Kvantum/Base16Kvantum"
+                    mkdir --parents "$directory"
+                    cp ${kvconfigGen} "$directory/Base16Kvantum.kvconfig"
+                    cp ${svgGen} "$directory/Base16Kvantum.svg"
+                    chmod -R u+w "$directory"
+                    ${pkgs.gnused}/bin/sed -i \
+                      -e 's/#${base0DHex}/#${accentHexNoHash}/g' \
+                      -e 's/#${toUpper base0DHex}/#${toUpper accentHexNoHash}/g' \
+                      "$directory/Base16Kvantum.svg"
+                  '';
+                in
                 {
                   xdg.configFile = {
                     "qt5ct/colors/stylix.conf".text = mkStyleColors {
@@ -295,40 +332,16 @@
                       qt6ct = true;
                       accent = stylixAccent;
                     };
-
-                    "Kvantum/Base16Kvantum".source =
-                      let
-                        # Re-run stylix's kvantum templates ourselves. Avoids infinite
-                        # recursion from reading config.xdg.configFile from within a
-                        # definition for the same option. Stylix's `config.lib.stylix.colors`
-                        # expects a nix path for `template`, so we write the upstream
-                        # mustache content to a store path first.
-                        mustachePath = p: pkgs.writeText (baseNameOf p) (builtins.readFile p);
-                        svgMustache = mustachePath "${inputs.stylix}/modules/qt/kvantum.svg.mustache";
-                        kvconfigMustache = mustachePath "${inputs.stylix}/modules/qt/kvconfig.mustache";
-                        svgGen = config.lib.stylix.colors {
-                          template = svgMustache;
-                          extension = ".svg";
-                        };
-                        kvconfigGen = config.lib.stylix.colors {
-                          template = kvconfigMustache;
-                          extension = ".kvconfig";
-                        };
-                        base0DHex = stylixColors.base0D or "89b4fa";
-                        accentHexNoHash = stylixColors.${stylixAccentSlot} or "cba6f7";
-                        patched = pkgs.runCommandLocal "base16-kvantum-accent" { } ''
-                          mkdir -p $out
-                          cp ${kvconfigGen} $out/Base16Kvantum.kvconfig
-                          cp ${svgGen} $out/Base16Kvantum.svg
-                          chmod -R u+w $out
-                          ${pkgs.gnused}/bin/sed -i \
-                            -e 's/#${base0DHex}/#${accentHexNoHash}/g' \
-                            -e 's/#${toUpper base0DHex}/#${toUpper accentHexNoHash}/g' \
-                            $out/Base16Kvantum.svg
-                        '';
-                      in
-                      mkForce "${patched}";
                   };
+
+                  # Stylix sets `qt.kvantum.themes = [ kvantumPackage ];` and
+                  # HM's qt.kvantum module turns that into a recursive symlink
+                  # at xdg.configFile.Kvantum (with stripPrefix=/share/Kvantum).
+                  # The per-file paths under Kvantum/Base16Kvantum/ are NOT
+                  # standalone xdg.configFile keys — they're synthesized by
+                  # the recursive walk — so overrides at those keys can't
+                  # compete. Replace the theme list at the source instead.
+                  qt.kvantum.themes = mkForce [ patchedKvantumTheme ];
 
                   qt.qt5ctSettings.Appearance.color_scheme_path = "${config.home.homeDirectory}/.config/qt5ct/colors/stylix.conf";
                   qt.qt6ctSettings.Appearance.color_scheme_path = "${config.home.homeDirectory}/.config/qt6ct/colors/stylix.conf";
