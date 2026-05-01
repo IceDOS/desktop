@@ -35,8 +35,8 @@
                 script = "icedos-startup";
               in
               {
-                home.file = mkIf (startupScript != "") {
-                  ".config/autostart/${script}.desktop" = {
+                xdg.configFile = mkIf (startupScript != "") {
+                  "autostart/${script}.desktop" = {
                     text = ''
                       [Desktop Entry]
                       Exec=${writeShellScriptBin script ''

@@ -178,7 +178,7 @@
               (
                 { config, ... }:
                 {
-                  home.file =
+                  xdg.configFile =
                     let
                       force = true;
 
@@ -194,9 +194,9 @@
                         let
                           colorSchemePath =
                             if qt6ct then
-                              "color_scheme_path=${config.home.homeDirectory}/.config/qt6ct/style-colors.conf"
+                              "color_scheme_path=${config.xdg.configHome}/qt6ct/style-colors.conf"
                             else
-                              "color_scheme_path=${config.home.homeDirectory}/.config/qt5ct/style-colors.conf";
+                              "color_scheme_path=${config.xdg.configHome}/qt5ct/style-colors.conf";
 
                           fonts =
                             if qt6ct then
@@ -245,22 +245,22 @@
                         '';
                     in
                     {
-                      ".config/qt5ct/qt5ct.conf" = {
+                      "qt5ct/qt5ct.conf" = {
                         inherit force;
                         text = qtConf false;
                       };
 
-                      ".config/qt5ct/style-colors.conf" = {
+                      "qt5ct/style-colors.conf" = {
                         inherit force;
                         text = styleColors false;
                       };
 
-                      ".config/qt6ct/qt6ct.conf" = {
+                      "qt6ct/qt6ct.conf" = {
                         inherit force;
                         text = qtConf true;
                       };
 
-                      ".config/qt6ct/style-colors.conf" = {
+                      "qt6ct/style-colors.conf" = {
                         inherit force;
                         text = styleColors true;
                       };
@@ -343,8 +343,8 @@
                   # compete. Replace the theme list at the source instead.
                   qt.kvantum.themes = mkForce [ patchedKvantumTheme ];
 
-                  qt.qt5ctSettings.Appearance.color_scheme_path = "${config.home.homeDirectory}/.config/qt5ct/colors/stylix.conf";
-                  qt.qt6ctSettings.Appearance.color_scheme_path = "${config.home.homeDirectory}/.config/qt6ct/colors/stylix.conf";
+                  qt.qt5ctSettings.Appearance.color_scheme_path = "${config.xdg.configHome}/qt5ct/colors/stylix.conf";
+                  qt.qt6ctSettings.Appearance.color_scheme_path = "${config.xdg.configHome}/qt6ct/colors/stylix.conf";
 
                   # HM's qt module sets QT_STYLE_OVERRIDE=kvantum in both
                   # home.sessionVariables AND systemd.user.sessionVariables.
