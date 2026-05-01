@@ -316,6 +316,7 @@
       {
         modules = [
           "adwaita-qt"
+          "entries"
           "startup"
           "stylix"
         ];
