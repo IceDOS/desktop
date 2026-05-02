@@ -22,7 +22,7 @@
         }:
 
         let
-          inherit (pkgs) writeShellScriptBin;
+          inherit (pkgs) makeDesktopItem writeShellScriptBin;
           inherit (config.icedos) desktop;
         in
         {
@@ -33,27 +33,26 @@
                 inherit (lib) mkIf;
                 inherit (desktop.users.${config.home.username}) startupScript;
                 script = "icedos-startup";
+
+                startupBin = writeShellScriptBin script ''
+                  base_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+                  nix_system_path="/run/current-system/sw/bin"
+                  nix_user_path="''${HOME}/.nix-profile/bin"
+                  export PATH="''${base_path}:''${nix_system_path}:''${nix_user_path}:$PATH"
+
+                  ${startupScript}
+                '';
+
+                startupItem = makeDesktopItem {
+                  name = script;
+                  desktopName = "StartupScript";
+                  exec = "${startupBin}/bin/${script}";
+                  terminal = false;
+                };
               in
               {
-                xdg.configFile = mkIf (startupScript != "") {
-                  "autostart/${script}.desktop" = {
-                    text = ''
-                      [Desktop Entry]
-                      Exec=${writeShellScriptBin script ''
-                        base_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-                        nix_system_path="/run/current-system/sw/bin"
-                        nix_user_path="''${HOME}/.nix-profile/bin"
-                        export PATH="''${base_path}:''${nix_system_path}:''${nix_user_path}:$PATH"
-
-                        ${startupScript}
-                      ''}/bin/${script}
-                      Icon=kitty
-                      Name=StartupScript
-                      StartupWMClass=startup
-                      Terminal=false
-                      Type=Application
-                    '';
-                  };
+                xdg.configFile."autostart/${script}.desktop" = mkIf (startupScript != "") {
+                  source = "${startupItem}/share/applications/${script}.desktop";
                 };
               }
             )
