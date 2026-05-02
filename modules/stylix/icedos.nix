@@ -8,7 +8,13 @@
 
   options.icedos.desktop.stylix =
     let
-      inherit (icedosLib) mkBoolOption mkStrListOption mkStrOption;
+      inherit (icedosLib)
+        mkAttrsOption
+        mkBoolOption
+        mkStrListOption
+        mkStrOption
+        ;
+
       inherit (lib) mkOption readFile types;
 
       inherit ((fromTOML (readFile ./config.toml)).icedos.desktop.stylix)
@@ -57,9 +63,9 @@
         '';
       };
 
-      themes = mkOption {
-        type = types.attrs;
+      themes = mkAttrsOption {
         default = { };
+
         description = ''
           Per-theme handler registry merged on top of the built-in defaults from
           ./lib.nix. Each entry has shape:
@@ -73,24 +79,13 @@
         '';
       };
 
-      cursorTheme = mkOption {
-        type = types.attrs;
-        default = cursorTheme;
-      };
+      cursorTheme = mkAttrsOption { default = cursorTheme; };
+      iconTheme = mkAttrsOption { default = iconTheme; };
+      fonts = mkAttrsOption { default = fonts; };
 
-      iconTheme = mkOption {
-        type = types.attrs;
-        default = iconTheme;
-      };
-
-      fonts = mkOption {
-        type = types.attrs;
-        default = fonts;
-      };
-
-      targets = mkOption {
-        type = types.attrs;
+      targets = mkAttrsOption {
         default = { };
+
         description = ''
           Per-stylix-target enable overrides, e.g. `targets.zed.enable = false`
           or `targets.feh.enable = false`. Each key is auto-routed to the

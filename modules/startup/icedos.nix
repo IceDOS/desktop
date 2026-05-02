@@ -35,10 +35,7 @@
                 script = "icedos-startup";
 
                 startupBin = writeShellScriptBin script ''
-                  base_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-                  nix_system_path="/run/current-system/sw/bin"
-                  nix_user_path="''${HOME}/.nix-profile/bin"
-                  export PATH="''${base_path}:''${nix_system_path}:''${nix_user_path}:$PATH"
+                  ${icedosLib.bash.exportSystemPath}
 
                   ${startupScript}
                 '';

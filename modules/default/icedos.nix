@@ -11,7 +11,7 @@
         mkBoolOption
         mkNumberOption
         mkStrOption
-        mkSubmoduleAttrsOption
+        mkUsersOption
         ;
 
       inherit (lib) readFile;
@@ -30,7 +30,7 @@
       autologinUser = mkStrOption { default = autologinUser; };
       timezone = mkStrOption { default = timezone; };
 
-      users = mkSubmoduleAttrsOption { default = { }; } {
+      users = mkUsersOption {
         idle = {
           disableMonitors = {
             enable = mkBoolOption { default = idle.disableMonitors.enable; };
