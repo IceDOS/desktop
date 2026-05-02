@@ -142,6 +142,18 @@
 
           services.displayManager.autoLogin.user = mkIf (autologinUser != "") autologinUser;
 
+          # Reload (don't restart) polkitd on switch. A restart drops every
+          # authentication agent's registration (cosmic-osd, sysauth, polkit-kde,
+          # gnome-shell), breaking pkexec until the session restarts. polkit 127
+          # is Type=notify-reload, so SIGHUP re-reads rules without dropping clients.
+          # reloadTriggers is cleared because reloadIfChanged makes the upstream
+          # split between reload-/restart-triggers redundant (both end up reloading).
+          systemd.services.polkit = {
+            restartIfChanged = false;
+            reloadIfChanged = true;
+            reloadTriggers = lib.mkForce [ ];
+          };
+
           xdg = {
             portal.config.common.default = "*";
 
