@@ -21,6 +21,7 @@
         autologinUser
         timezone
         users
+        windows
         ;
 
       inherit (users.username) idle;
@@ -29,6 +30,13 @@
       accentColor = mkStrOption { default = accentColor; };
       autologinUser = mkStrOption { default = autologinUser; };
       timezone = mkStrOption { default = timezone; };
+
+      windows = {
+        activeHint = mkBoolOption { default = windows.activeHint; };
+        activeHintSize = mkNumberOption { default = windows.activeHintSize; };
+        maximizeButton = mkBoolOption { default = windows.maximizeButton; };
+        minimizeButton = mkBoolOption { default = windows.minimizeButton; };
+      };
 
       users = mkUsersOption {
         idle = {
@@ -121,6 +129,12 @@
               libnotify # Send desktop notifications
               loupe # Image viewer
               onlyoffice-desktopeditors # Office tools
+
+              # Qt5 + Qt6 Wayland decoration plugins that read
+              # `org/gnome/desktop/wm/preferences/button-layout` from dconf,
+              # so qt5ct/qt6ct/Telegram/etc. honor `icedos.desktop.titlebar.*`.
+              qadwaitadecorations
+              qadwaitadecorations-qt6
             ];
 
             sessionVariables = {
@@ -129,6 +143,13 @@
               QT_QPA_PLATFORMTHEME = mkIf (
                 !stylixEnabled && !config.services.desktopManager.plasma6.enable
               ) "qt5ct";
+
+              # Forces Qt's Wayland CSD to the adwaita plugin (provided by the
+              # qadwaitadecorations packages above), which reads the GNOME
+              # button-layout dconf key. Without this Qt5 falls back to the
+              # bradient plugin (3 buttons hardcoded) and Qt6 falls back to
+              # libdecor's default plugin.
+              QT_WAYLAND_DECORATION = "adwaita";
             };
           };
 
@@ -211,6 +232,13 @@
 
                   dconf.settings = {
                     "org/gnome/desktop/interface".color-scheme = mkDefault "prefer-dark";
+
+                    # GTK/libadwaita apps (Nautilus, GNOME Files, Settings, etc.)
+                    # read this on every session, not only under GNOME. Set it
+                    # here so non-GNOME sessions (COSMIC, Hyprland) also honor
+                    # the global titlebar visibility flags.
+                    "org/gnome/desktop/wm/preferences".button-layout =
+                      icedosLib.desktop.mkButtonLayoutString desktop.windows;
 
                     "org/gtk/settings/file-chooser" = {
                       sort-directories-first = true;

@@ -3,6 +3,12 @@ accentColor = "B067FD" # With gnome enabled this is getting overriden by gnome's
 autologinUser = ""
 timezone = "Europe/Bucharest"
 
+[icedos.desktop.windows]
+activeHint = true
+activeHintSize = 1
+maximizeButton = true
+minimizeButton = true
+
 [icedos.desktop.users.username.idle.disableMonitors]
 enable = true
 seconds = 600
