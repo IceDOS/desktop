@@ -10,6 +10,7 @@
       inherit (icedosLib)
         mkBoolOption
         mkNumberOption
+        mkStrListOption
         mkStrOption
         mkUsersOption
         ;
@@ -24,7 +25,7 @@
         windows
         ;
 
-      inherit (users.username) idle;
+      inherit (users.username) bookmarks idle;
     in
     {
       accentColor = mkStrOption { default = accentColor; };
@@ -39,6 +40,8 @@
       };
 
       users = mkUsersOption {
+        bookmarks = mkStrListOption { default = bookmarks; };
+
         idle = {
           disableMonitors = {
             enable = mkBoolOption { default = idle.disableMonitors.enable; };
@@ -294,6 +297,8 @@
                         u.publicShare
                         u.templates
                       ]
+                      + "\n"
+                      + lib.concatStringsSep "\n" desktop.users.${user}.bookmarks
                       + "\n";
                   };
                 })
