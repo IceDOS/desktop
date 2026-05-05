@@ -11,11 +11,12 @@
       inherit (icedosLib)
         mkAttrsOption
         mkBoolOption
+        mkEnumOption
         mkStrListOption
         mkStrOption
         ;
 
-      inherit (lib) mkOption readFile types;
+      inherit (lib) readFile;
 
       inherit ((fromTOML (readFile ./config.toml)).icedos.desktop.stylix)
         accentBase16Slot
@@ -36,32 +37,31 @@
       base16Scheme = mkStrOption { default = base16Scheme; };
       image = mkStrOption { default = image; };
 
-      polarity = mkOption {
-        type = types.enum [
-          "dark"
-          "either"
-          "light"
-        ];
-        default = polarity;
-      };
+      polarity = mkEnumOption { default = polarity; } [
+        "dark"
+        "either"
+        "light"
+      ];
 
-      accentBase16Slot = mkOption {
-        type = types.enum [
-          "base08"
-          "base09"
-          "base0A"
-          "base0B"
-          "base0C"
-          "base0D"
-          "base0E"
-          "base0F"
-        ];
-        default = accentBase16Slot;
-        description = ''
-          The base16 slot treated as the highlight/accent color. Shared source of
-          truth for themed components that understand accents.
-        '';
-      };
+      accentBase16Slot =
+        mkEnumOption
+          {
+            default = accentBase16Slot;
+            description = ''
+              The base16 slot treated as the highlight/accent color. Shared source of
+              truth for themed components that understand accents.
+            '';
+          }
+          [
+            "base08"
+            "base09"
+            "base0A"
+            "base0B"
+            "base0C"
+            "base0D"
+            "base0E"
+            "base0F"
+          ];
 
       themes = mkAttrsOption {
         default = { };

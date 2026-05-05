@@ -1,12 +1,13 @@
-{ lib, ... }:
+{ icedosLib, lib, ... }:
 
 {
   options.icedos.desktop.entries =
     let
-      inherit (lib) mkOption readFile;
+      inherit (lib) readFile;
+      inherit (icedosLib) mkUntypedOption;
       inherit ((fromTOML (readFile ./config.toml)).icedos.desktop) entries;
     in
-    mkOption { default = entries; };
+    mkUntypedOption { default = entries; };
 
   outputs.nixosModules =
     { ... }:
