@@ -3,11 +3,11 @@
 {
   options.icedos.desktop.entries =
     let
-      inherit (lib) readFile;
-      inherit (icedosLib) mkUntypedOption;
+      inherit (lib) readFile types;
+      inherit (icedosLib) mkListOption;
       inherit ((fromTOML (readFile ./config.toml)).icedos.desktop) entries;
     in
-    mkUntypedOption { default = entries; };
+    mkListOption { default = entries; } types.attrs;
 
   outputs.nixosModules =
     { ... }:

@@ -12,13 +12,15 @@
         }:
 
         let
-          inherit (icedosLib) abortIf;
+          inherit (icedosLib) validate;
           inherit (config.services.displayManager) gdm sddm;
         in
         {
-          services.displayManager.cosmic-greeter.enable = abortIf (
-            gdm.enable || sddm.enable
-          ) "More than one display managers are setup, please use only one!";
+          services.displayManager.cosmic-greeter.enable = validate.abort {
+            when = gdm.enable || sddm.enable;
+            path = "icedos.desktop.cosmic-greeter";
+            msg = "More than one display managers are setup, please use only one!";
+          };
         }
       )
     ];

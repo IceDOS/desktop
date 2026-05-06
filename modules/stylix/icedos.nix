@@ -37,15 +37,24 @@
       base16Scheme = mkStrOption { default = base16Scheme; };
       image = mkStrOption { default = image; };
 
-      polarity = mkEnumOption { default = polarity; } [
-        "dark"
-        "either"
-        "light"
-      ];
+      polarity =
+        mkEnumOption
+          {
+            path = "icedos.desktop.stylix.polarity";
+            source = ./config.toml;
+            default = polarity;
+          }
+          [
+            "dark"
+            "either"
+            "light"
+          ];
 
       accentBase16Slot =
         mkEnumOption
           {
+            path = "icedos.desktop.stylix.accentBase16Slot";
+            source = ./config.toml;
             default = accentBase16Slot;
             description = ''
               The base16 slot treated as the highlight/accent color. Shared source of
