@@ -23,6 +23,7 @@
         bookmarks
         timezone
         users
+        wallpaper
         windows
         ;
 
@@ -32,6 +33,7 @@
       accentColor = mkStrOption { default = accentColor; };
       autologinUser = mkStrOption { default = autologinUser; };
       timezone = mkStrOption { default = timezone; };
+      wallpaper = mkStrOption { default = wallpaper; };
 
       bookmarks = {
         documents = mkBoolOption { default = bookmarks.documents; };

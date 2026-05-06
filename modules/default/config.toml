@@ -2,6 +2,7 @@
 accentColor = "B067FD" # With gnome enabled this is getting overriden by gnome's selected accent color hex code
 autologinUser = ""
 timezone = "Europe/Bucharest"
+wallpaper = "" # Absolute path to image. Empty = user/UI-managed (no rebuild override).
 
 [icedos.desktop.bookmarks]
 extras = []

@@ -227,19 +227,19 @@
         mkIf cfg.enable {
           stylix = mkMerge [
             {
-              enable = true;
               inherit (cfg) autoEnable polarity;
+
+              enable = true;
               targets = systemTargets;
-
               base16Scheme = resolvedBase16Scheme;
-
-              image = if cfg.image != "" then cfg.image else config.lib.stylix.pixel "base0A";
             }
 
             {
               cursor.name = if cfg.cursorTheme.name != "" then cfg.cursorTheme.name else autoCursorName;
+
               cursor.package =
                 if cfg.cursorTheme.package != "" then resolvePkg cfg.cursorTheme.package else autoCursorPackage;
+
               cursor.size = if cfg.cursorTheme.size > 0 then cfg.cursorTheme.size else 24;
             }
 
@@ -291,14 +291,6 @@
             in
             [
               {
-                # User-supplied home-manager-side and dual-plane targets, plus
-                # our gtk extraCss override. mkMerge is needed (not `//`) so a
-                # user-set `targets.gtk.enable = false` doesn't get clobbered by
-                # the gtk.extraCss assignment — `//` is a shallow attrset merge
-                # and would replace the whole `gtk` subtree. Stylix ignores
-                # gtk.gtk{3,4}.extraCss; using its own extraCss hook keeps
-                # libadwaita widgets on the stylix accent slot instead of
-                # libadwaita's blue.
                 stylix.targets = mkMerge [
                   hmTargets
                   { gtk.extraCss = gtkCss; }
