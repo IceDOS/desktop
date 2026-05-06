@@ -3,6 +3,16 @@ accentColor = "B067FD" # With gnome enabled this is getting overriden by gnome's
 autologinUser = ""
 timezone = "Europe/Bucharest"
 
+[icedos.desktop.bookmarks]
+extras = []
+documents = true
+downloads = true
+music = true
+pictures = true
+public = true
+templates = true
+videos = true
+
 [icedos.desktop.windows]
 activeHint = true
 activeHintSize = 1
