@@ -99,8 +99,9 @@
           inherit (lib)
             hasAttr
             mapAttrs
-            mkIf
             mkDefault
+            mkForce
+            mkIf
             mkMerge
             ;
 
@@ -110,7 +111,7 @@
 
           stylixEnabled = config.stylix.enable or false;
 
-          stylixAccentSlot = config.icedos.desktop.stylix.accentBase16Slot or "base0D";
+          stylixAccentSlot = desktop.stylix.accentBase16Slot or "base0D";
           stylixColors = config.lib.stylix.colors or { };
 
           accentHex =
@@ -141,7 +142,7 @@
         in
         {
           icedos.desktop.users = genDefaults {
-            users = config.icedos.users;
+            inherit users;
           };
 
           environment = {
@@ -195,7 +196,7 @@
           systemd.services.polkit = {
             restartIfChanged = false;
             reloadIfChanged = true;
-            reloadTriggers = lib.mkForce [ ];
+            reloadTriggers = mkForce [ ];
           };
 
           xdg = {
@@ -287,7 +288,18 @@
                   let
                     inherit (config.xdg) userDirs;
                     inherit (desktop) bookmarks;
-                    inherit (lib) concatStringsSep optional;
+
+                    inherit (lib)
+                      concatMapStringsSep
+                      concatStringsSep
+                      elem
+                      filter
+                      hasInfix
+                      hm
+                      optional
+                      optionalString
+                      unique
+                      ;
 
                     defaultEntries =
                       optional bookmarks.documents {
@@ -338,7 +350,7 @@
                       e:
                       let
                         n = normalizeExtra e;
-                        uri = if lib.hasInfix "://" n.path then n.path else "file://${n.path}";
+                        uri = if hasInfix "://" n.path then n.path else "file://${n.path}";
                         label = if n.name != "" then n.name else baseNameOf n.path;
                       in
                       {
@@ -350,16 +362,16 @@
                     # entry whose URI is also declared as an extra so the extra's
                     # label wins. Two extras at the same URI is treated as a config bug.
                     extrasUris = map (e: e.uri) extrasEntries;
-                    duplicateUris = lib.unique (
-                      lib.filter (uri: builtins.length (lib.filter (x: x == uri) extrasUris) > 1) extrasUris
+                    duplicateUris = unique (
+                      filter (uri: builtins.length (filter (x: x == uri) extrasUris) > 1) extrasUris
                     );
 
-                    declaredEntries = lib.filter (e: !(lib.elem e.uri extrasUris)) defaultEntries ++ extrasEntries;
+                    declaredEntries = filter (e: !(elem e.uri extrasUris)) defaultEntries ++ extrasEntries;
 
                     declaredLines = map (e: "${e.uri} ${e.label}") declaredEntries;
 
                     declaredFile = pkgs.writeText "icedos-gtk-bookmarks-declared" (
-                      lib.concatStringsSep "\n" declaredLines + lib.optionalString (declaredLines != [ ]) "\n"
+                      concatStringsSep "\n" declaredLines + optionalString (declaredLines != [ ]) "\n"
                     );
 
                     # Nautilus / GTK file pickers auto-seed all XDG dirs on first
@@ -368,7 +380,7 @@
                     # when the line was added by another app and never tracked in
                     # our state file.
                     xdgUriFile = pkgs.writeText "icedos-gtk-bookmarks-xdg-uris" (
-                      lib.concatMapStringsSep "\n" (p: "file://${p}") [
+                      concatMapStringsSep "\n" (p: "file://${p}") [
                         userDirs.documents
                         userDirs.download
                         userDirs.music
@@ -390,7 +402,7 @@
                       }
                     ];
 
-                    home.activation.seedGtkBookmarks = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+                    home.activation.seedGtkBookmarks = hm.dag.entryAfter [ "writeBoundary" ] ''
                       target="$HOME/.config/gtk-3.0/bookmarks"
                       state_dir="$HOME/.local/state/icedos"
                       state="$state_dir/gtk-bookmarks.declared"

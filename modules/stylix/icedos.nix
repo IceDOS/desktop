@@ -268,14 +268,11 @@
 
           home-manager.sharedModules =
             let
-              accentHex = "#${config.lib.stylix.colors.${cfg.accentBase16Slot}}";
+              inherit (config.lib.stylix) colors;
 
-              accentFgHex = "#${
-                if config.stylix.polarity == "light" then
-                  config.lib.stylix.colors.base00
-                else
-                  config.lib.stylix.colors.base07
-              }";
+              accentHex = "#${colors.${cfg.accentBase16Slot}}";
+
+              accentFgHex = "#${if config.stylix.polarity == "light" then colors.base00 else colors.base07}";
 
               gtkCss = ''
                 @define-color accent_bg_color ${accentHex};

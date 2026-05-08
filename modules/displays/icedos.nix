@@ -20,9 +20,10 @@
             optional
             ;
 
-          cfg = config.icedos;
-          gnome = hasAttr "gnome" cfg.desktop;
-          hyprland = hasAttr "hyprland" cfg.desktop;
+          inherit (config.icedos) desktop hardware;
+
+          gnome = hasAttr "gnome" desktop;
+          hyprland = hasAttr "hyprland" desktop;
           tempConfigPath = "/tmp/icedos";
           primaryDisplayPath = "${tempConfigPath}/primary-display";
         in
@@ -77,7 +78,7 @@
           home-manager.sharedModules = [
             {
               systemd.user.services.xprimary =
-                mkIf (hyprland && hasAttr "monitors" cfg.hardware && (length cfg.hardware.monitors) != 0)
+                mkIf (hyprland && hasAttr "monitors" hardware && (length hardware.monitors) != 0)
                   {
 
                     Unit = {
@@ -101,7 +102,7 @@
                         "${pkgs.writeShellScript "xprimary" ''
                           TEMP_CONFIG_PATH="${tempConfigPath}"
                           PRIMARY_DISPLAY_PATH="${primaryDisplayPath}"
-                          PRIMARY_DISPLAY="${(head (cfg.hardware.monitors)).name}"
+                          PRIMARY_DISPLAY="${(head hardware.monitors).name}"
 
                           function setPrimaryMonitor () {
                             ${echo} "$1" > "$PRIMARY_DISPLAY_PATH"

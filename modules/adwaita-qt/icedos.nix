@@ -48,7 +48,7 @@
 
           stylixEnabled = config.stylix.enable or false;
           stylixColors = config.lib.stylix.colors or { };
-          stylixAccentSlot = config.icedos.desktop.stylix.accentBase16Slot or "base0D";
+          stylixAccentSlot = desktop.stylix.accentBase16Slot or "base0D";
           stylixAccent = "#${stylixColors.${stylixAccentSlot} or "89b4fa"}";
 
           # Qt palette (20/21 fields). Positions 12/14/15 are Highlight/Link/LinkVisited
@@ -286,6 +286,8 @@
               (
                 { config, ... }:
                 let
+                  inherit (config.lib.stylix) colors;
+
                   # Re-run stylix's kvantum templates ourselves so we can
                   # post-process the SVG. Stylix's `config.lib.stylix.colors`
                   # expects a nix path for `template`, so we write the upstream
@@ -294,12 +296,12 @@
                   svgMustache = mustachePath "${inputs.stylix}/modules/qt/kvantum.svg.mustache";
                   kvconfigMustache = mustachePath "${inputs.stylix}/modules/qt/kvconfig.mustache";
 
-                  svgGen = config.lib.stylix.colors {
+                  svgGen = colors {
                     template = svgMustache;
                     extension = ".svg";
                   };
 
-                  kvconfigGen = config.lib.stylix.colors {
+                  kvconfigGen = colors {
                     template = kvconfigMustache;
                     extension = ".kvconfig";
                   };
