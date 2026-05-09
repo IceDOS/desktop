@@ -519,6 +519,7 @@
         modules = [
           "adwaita-qt"
           "entries"
+          "session"
           "startup"
           "stylix"
         ];
