@@ -1,5 +1,5 @@
 [icedos.desktop]
-accentColor = "B067FD" # With gnome enabled this is getting overriden by gnome's selected accent color hex code
+accentColor = "" # Accepts a libadwaita name (blue/teal/green/yellow/orange/red/pink/purple/slate), a base16 slot (base08..base0F, only meaningful when stylix is on), or a hex (RRGGBB / #RRGGBB). Empty defaults to "purple". Under GNOME, non-name inputs trigger a warning since GNOME's accent-color dconf key only accepts named values.
 autologinUser = ""
 timezone = "Europe/Bucharest"
 wallpaper = "" # Absolute path to image. Empty = user/UI-managed (no rebuild override).

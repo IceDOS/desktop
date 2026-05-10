@@ -57,6 +57,23 @@ let
 
       cursorName = name: accent: "catppuccin-${flavor name}-${accent}-cursors";
     };
+
+    adwaita = {
+      match = name: head (splitString "-" name) == "adwaita";
+
+      schemePath = name: ./schemes/${name}.yaml;
+
+      accentNameFromSlot = {
+        base08 = "red";
+        base09 = "orange";
+        base0A = "yellow";
+        base0B = "green";
+        base0C = "teal";
+        base0D = "blue";
+        base0E = "purple";
+        base0F = "slate";
+      };
+    };
   };
 
   fallbackTheme = {

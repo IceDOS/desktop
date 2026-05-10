@@ -12,7 +12,7 @@
     };
 
   outputs.nixosModules =
-    { inputs, ... }:
+    { ... }:
     [
       (
         {
@@ -26,30 +26,18 @@
         let
           inherit (config.icedos) desktop;
           inherit (desktop) themeQt;
-          inherit (icedosLib) generateAccentColor;
+          inherit (icedosLib) generateAccent;
 
           inherit (lib)
-            hasAttr
             mkForce
             mkIf
             mkMerge
-            toUpper
             ;
 
-          accentColor =
-            let
-              inherit (desktop) accentColor gnome;
-            in
-            generateAccentColor {
-              inherit accentColor;
-              gnomeAccentColor = gnome.accentColor;
-              hasGnome = hasAttr "gnome" desktop;
-            };
-
-          stylixEnabled = config.stylix.enable or false;
-          stylixColors = config.lib.stylix.colors or { };
-          stylixAccentSlot = desktop.stylix.accentBase16Slot or "base0D";
-          stylixAccent = "#${stylixColors.${stylixAccentSlot} or "89b4fa"}";
+          resolved = generateAccent config;
+          accentColor = resolved.hex;
+          stylixAccent = resolved.hex;
+          stylixEnabled = resolved.stylixOn;
 
           # Qt palette (20/21 fields). Positions 12/14/15 are Highlight/Link/LinkVisited
           # — those are the accent slots. Parameterized so it can be called for both
@@ -270,60 +258,17 @@
             ];
           })
 
-          # When stylix is on:
-          #   - Stylix writes `custom_palette=true` in qt{5,6}ct.conf without a
-          #     `color_scheme_path`, so Qt falls back to its blue default QPalette.
-          #     Fix: write a palette file + point qt{5,6}ctSettings at it.
-          #   - Stylix's generated Kvantum SVG hardcodes #${base0D-hex} (blue in
-          #     catppuccin) for ~28 accent widget fills. Kvantum renders widgets
-          #     from the SVG, not the `highlight.color` key. So setting accent =
-          #     base0E alone still paints tabs/buttons/progress blue. Fix: post-
-          #     process the SVG to replace base0D-hex with the user's chosen
-          #     accent-slot hex, then override xdg.configFile."Kvantum/Base16Kvantum"
-          #     to point to the patched directory.
+          # When stylix is on, stylix writes `custom_palette=true` in
+          # qt{5,6}ct.conf without a `color_scheme_path`, so Qt falls back to
+          # its blue default QPalette. Fix: write a palette file + point
+          # qt{5,6}ctSettings at it. Kvantum accent comes from
+          # `desktop/modules/stylix/icedos.nix`'s global base0D→accent YAML
+          # patch — stylix's stock kvantum render already uses the resolved
+          # accent in every base0D slot, no per-package post-process needed.
           (mkIf (themeQt && !config.services.desktopManager.plasma6.enable && stylixEnabled) {
             home-manager.sharedModules = [
               (
                 { config, ... }:
-                let
-                  inherit (config.lib.stylix) colors;
-
-                  # Re-run stylix's kvantum templates ourselves so we can
-                  # post-process the SVG. Stylix's `config.lib.stylix.colors`
-                  # expects a nix path for `template`, so we write the upstream
-                  # mustache content to a store path first.
-                  mustachePath = p: pkgs.writeText (baseNameOf p) (builtins.readFile p);
-                  svgMustache = mustachePath "${inputs.stylix}/modules/qt/kvantum.svg.mustache";
-                  kvconfigMustache = mustachePath "${inputs.stylix}/modules/qt/kvconfig.mustache";
-
-                  svgGen = colors {
-                    template = svgMustache;
-                    extension = ".svg";
-                  };
-
-                  kvconfigGen = colors {
-                    template = kvconfigMustache;
-                    extension = ".kvconfig";
-                  };
-
-                  base0DHex = stylixColors.base0D or "89b4fa";
-                  accentHexNoHash = stylixColors.${stylixAccentSlot} or "cba6f7";
-
-                  # Match stylix's `kvantumPackage` layout
-                  # ($out/share/Kvantum/Base16Kvantum/...) so HM's qt.kvantum
-                  # module can symlinkJoin this in place of the upstream theme.
-                  patchedKvantumTheme = pkgs.runCommandLocal "base16-kvantum-accent" { } ''
-                    directory="$out/share/Kvantum/Base16Kvantum"
-                    mkdir --parents "$directory"
-                    cp ${kvconfigGen} "$directory/Base16Kvantum.kvconfig"
-                    cp ${svgGen} "$directory/Base16Kvantum.svg"
-                    chmod -R u+w "$directory"
-                    ${pkgs.gnused}/bin/sed -i \
-                      -e 's/#${base0DHex}/#${accentHexNoHash}/g' \
-                      -e 's/#${toUpper base0DHex}/#${toUpper accentHexNoHash}/g' \
-                      "$directory/Base16Kvantum.svg"
-                  '';
-                in
                 {
                   xdg.configFile = {
                     "qt5ct/colors/stylix.conf".text = mkStyleColors {
@@ -335,15 +280,6 @@
                       accent = stylixAccent;
                     };
                   };
-
-                  # Stylix sets `qt.kvantum.themes = [ kvantumPackage ];` and
-                  # HM's qt.kvantum module turns that into a recursive symlink
-                  # at xdg.configFile.Kvantum (with stripPrefix=/share/Kvantum).
-                  # The per-file paths under Kvantum/Base16Kvantum/ are NOT
-                  # standalone xdg.configFile keys — they're synthesized by
-                  # the recursive walk — so overrides at those keys can't
-                  # compete. Replace the theme list at the source instead.
-                  qt.kvantum.themes = mkForce [ patchedKvantumTheme ];
 
                   qt.qt5ctSettings.Appearance.color_scheme_path = "${config.xdg.configHome}/qt5ct/colors/stylix.conf";
                   qt.qt6ctSettings.Appearance.color_scheme_path = "${config.xdg.configHome}/qt6ct/colors/stylix.conf";

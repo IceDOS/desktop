@@ -93,7 +93,7 @@
         }:
 
         let
-          inherit (icedosLib) generateAccentColor;
+          inherit (icedosLib) generateAccent;
           inherit (icedosLib.users) genDefaults;
 
           inherit (lib)
@@ -103,26 +103,19 @@
             mkForce
             mkIf
             mkMerge
+            optional
             ;
 
           inherit (config.icedos) applications desktop users;
           inherit (applications) defaultBrowser defaultEditor;
           inherit (desktop) autologinUser timezone;
 
-          stylixEnabled = config.stylix.enable or false;
+          resolved = generateAccent config;
 
-          stylixAccentSlot = desktop.stylix.accentBase16Slot or "base0D";
-          stylixColors = config.lib.stylix.colors or { };
+          inherit (resolved) hex stylixOn;
 
-          accentHex =
-            if stylixEnabled then
-              "#${stylixColors.${stylixAccentSlot}}"
-            else
-              generateAccentColor {
-                inherit (desktop) accentColor;
-                gnomeAccentColor = desktop.gnome.accentColor or "blue";
-                hasGnome = hasAttr "gnome" desktop;
-              };
+          stylixEnabled = stylixOn;
+          accentHex = hex;
 
           audioPlayer = "io.bassi.Amberol.desktop";
           browser = defaultBrowser;
@@ -144,6 +137,8 @@
           icedos.desktop.users = genDefaults {
             inherit users;
           };
+
+          warnings = optional (resolved.warning != null) resolved.warning;
 
           environment = {
             systemPackages = with pkgs; [

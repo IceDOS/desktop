@@ -19,7 +19,6 @@
       inherit (lib) readFile;
 
       inherit ((fromTOML (readFile ./config.toml)).icedos.desktop.stylix)
-        accentBase16Slot
         autoEnable
         base16Scheme
         cursorTheme
@@ -50,28 +49,6 @@
             "light"
           ];
 
-      accentBase16Slot =
-        mkEnumOption
-          {
-            path = "icedos.desktop.stylix.accentBase16Slot";
-            source = ./config.toml;
-            default = accentBase16Slot;
-            description = ''
-              The base16 slot treated as the highlight/accent color. Shared source of
-              truth for themed components that understand accents.
-            '';
-          }
-          [
-            "base08"
-            "base09"
-            "base0A"
-            "base0B"
-            "base0C"
-            "base0D"
-            "base0E"
-            "base0F"
-          ];
-
       themes = mkAttrsOption {
         default = { };
 
@@ -81,8 +58,16 @@
             { match              :: string -> bool;
               accentNameFromSlot :: { base0X = "name"; ... };
               iconsPackage       :: string -> string -> derivation;
+              iconsDark          :: string -> string -> string; (optional; GTK
+                                                                icon-theme name
+                                                                for dark polarity)
+              iconsLight         :: string -> string -> string; (optional; light
+                                                                polarity)
               cursorPackage      :: string -> string -> derivation;
-              cursorName         :: string -> string -> string; }
+              cursorName         :: string -> string -> string;
+              schemePath         :: string -> path; (optional; supplies a local
+                                                    YAML when base16-schemes
+                                                    lacks the named scheme) }
           First matching handler wins; unmatched schemes use a Papirus + Bibata
           fallback.
         '';
@@ -118,6 +103,8 @@
     { inputs, ... }:
     [
       { imports = [ inputs.stylix.nixosModules.stylix ]; }
+
+      (import ./vscodium-target.nix { inherit inputs; })
 
       (
         {
@@ -164,38 +151,103 @@
 
           isPathLike = s: hasInfix "/" s || hasSuffix ".yaml" s;
 
+          # Empty base16Scheme = Adwaita; pick the variant from polarity.
+          # `polarity = "either"` collapses to dark.
+          adwaitaVariant = if cfg.polarity == "light" then "light" else "dark";
+
           schemeName =
             if cfg.base16Scheme == "" then
-              "edge-dark"
+              "adwaita-${adwaitaVariant}"
             else if isPathLike cfg.base16Scheme then
               removeSuffix ".yaml" (baseNameOf cfg.base16Scheme)
             else
               cfg.base16Scheme;
 
-          resolvedBase16Scheme =
-            if cfg.base16Scheme == "" then
-              "${pkgs.base16-schemes}/share/themes/edge-dark.yaml"
-            else if isPathLike cfg.base16Scheme then
-              cfg.base16Scheme
-            else
-              "${pkgs.base16-schemes}/share/themes/${cfg.base16Scheme}.yaml";
-
           mergedThemes = stylixLib.defaultThemes // cfg.themes;
           theme = stylixLib.resolveTheme mergedThemes schemeName;
 
-          accentName =
-            theme.accentNameFromSlot.${cfg.accentBase16Slot}
-              or stylixLib.defaultAccentNames.${cfg.accentBase16Slot};
+          resolvedBase16Scheme =
+            if isPathLike cfg.base16Scheme then
+              cfg.base16Scheme
+            else if theme ? schemePath then
+              theme.schemePath schemeName
+            else
+              "${pkgs.base16-schemes}/share/themes/${schemeName}.yaml";
 
-          autoIconsPackage = theme.iconsPackage schemeName accentName;
-          autoCursorPackage = theme.cursorPackage schemeName accentName;
-          autoCursorName = theme.cursorName schemeName accentName;
+          resolved = icedosLib.generateAccent config;
+
+          # Stylix targets hardcode `base0D` (the base16 "function name" slot)
+          # for every accent surface — vscode button bg, zed link colors,
+          # kvantum highlight, gtk treeview selection, etc. When the user
+          # picks an accent that doesn't happen to live on base0D (slot
+          # mismatch, named accent, raw hex) the palette's blue still wins on
+          # those surfaces and the override is invisible. Patch the resolved
+          # YAML once at the source: rewrite the `base0D` line to the
+          # resolved accent hex. All stylix targets re-derive their values
+          # from `config.lib.stylix.colors.base0D` so this propagates
+          # everywhere without per-target post-processing.
+          #
+          # Stringify the derivation: `stylix.base16Scheme` accepts either an
+          # attrset (parsed scheme) or a path. A bare derivation is an
+          # attrset in Nix, so passing the derivation directly trips
+          # base16.nix's `isAttrs` branch and parsing fails. Interpolating
+          # forces path-string treatment.
+          accentPatchedBase16Scheme = "${pkgs.runCommandLocal "icedos-base16-accent.yaml" { } ''
+            cp ${resolvedBase16Scheme} $out
+            chmod u+w $out
+            ${pkgs.gnused}/bin/sed -i -E \
+              's/(^[[:space:]]*base0D:[[:space:]]*"?#?)[0-9a-fA-F]{6}("?)/\1${resolved.hexNoHash}\2/' \
+              $out
+          ''}";
+
+          # Slot-input under stylix gets the theme-specific accent name (e.g.
+          # catppuccin's `mauve`/`flamingo`). Name and hex inputs already
+          # produce a libadwaita name in `resolved.name` and don't need
+          # theme-aware remapping — the theme handlers' icon / cursor
+          # packages still take that name and the package's name-resolver
+          # decides whether to honour or fallback.
+          accentName =
+            if resolved.slot != null then
+              theme.accentNameFromSlot.${resolved.slot} or stylixLib.defaultAccentNames.${resolved.slot}
+            else
+              resolved.name;
+
+          autoIconsPackage =
+            if theme ? iconsPackage then
+              theme.iconsPackage schemeName accentName
+            else
+              stylixLib.fallbackTheme.iconsPackage schemeName accentName;
+
+          autoCursorPackage =
+            if theme ? cursorPackage then
+              theme.cursorPackage schemeName accentName
+            else
+              stylixLib.fallbackTheme.cursorPackage schemeName accentName;
+
+          autoCursorName =
+            if theme ? cursorName then
+              theme.cursorName schemeName accentName
+            else
+              stylixLib.fallbackTheme.cursorName schemeName accentName;
 
           iconsPackage =
             if cfg.iconTheme.package == "" then autoIconsPackage else resolvePkg cfg.iconTheme.package;
 
-          autoIconsDark = if cfg.iconTheme.dark != "" then cfg.iconTheme.dark else "Papirus-Dark";
-          autoIconsLight = if cfg.iconTheme.light != "" then cfg.iconTheme.light else "Papirus-Light";
+          autoIconsDark =
+            if cfg.iconTheme.dark != "" then
+              cfg.iconTheme.dark
+            else if theme ? iconsDark then
+              theme.iconsDark schemeName accentName
+            else
+              "Papirus-Dark";
+
+          autoIconsLight =
+            if cfg.iconTheme.light != "" then
+              cfg.iconTheme.light
+            else if theme ? iconsLight then
+              theme.iconsLight schemeName accentName
+            else
+              "Papirus-Light";
 
           mkFont = font: {
             inherit (font) name;
@@ -240,8 +292,27 @@
 
               enable = true;
               targets = systemTargets;
-              base16Scheme = resolvedBase16Scheme;
+              base16Scheme = accentPatchedBase16Scheme;
             }
+
+            # Stylix auto-detects gnome and sets `qt.platform = "gnome"`,
+            # which (a) is unsupported on stylix's own qt HM target (only
+            # `qtct` works) and (b) maps to the deprecated nixpkgs value
+            # `qt.platformTheme.name = "gnome"`. Pin to qtct to silence
+            # both warnings and route Qt apps through the supported path.
+            { targets.qt.platform = lib.mkForce "qtct"; }
+
+            # Stylix's `gnome` target rewrites the entire gnome-shell theme
+            # via a base16-mustache SCSS render, plus patches gnome-shell to
+            # drop the Dark Style toggle. That tints every panel popup
+            # (calendar, notifications, app-grid, language menu, ...) with
+            # base01/base02/base03 instead of upstream Adwaita greys, which
+            # ends up looking off across most of the shell. Disable the
+            # target on both NixOS and home-manager planes so gnome-shell
+            # renders with its bundled upstream Adwaita theme. Stylix's
+            # accent / dark-mode / wallpaper integration is reattached via
+            # dconf below. The `gtk` target stays on for libadwaita apps.
+            { targets.gnome.enable = lib.mkForce false; }
 
             {
               cursor.name = if cfg.cursorTheme.name != "" then cfg.cursorTheme.name else autoCursorName;
@@ -270,13 +341,88 @@
             let
               inherit (config.lib.stylix) colors;
 
-              accentHex = "#${colors.${cfg.accentBase16Slot}}";
+              accentHex = resolved.hex;
 
               accentFgHex = "#${if config.stylix.polarity == "light" then colors.base00 else colors.base07}";
 
+              isLight = config.stylix.polarity == "light";
+
+              # libadwaita's named-color set drives every modern GTK4 app's
+              # surfaces (Files, Console, Settings, Calendar, Calculator, ...).
+              # Stylix's stock gtk target only writes the older `theme_*_color`
+              # family, so without these explicit overrides every libadwaita
+              # surface collapses to a single fallback and the
+              # sidebar/headerbar/view hierarchy disappears. Map each named
+              # color to the corresponding base16 slot so the hierarchy follows
+              # the active palette regardless of which scheme is selected.
+              libadwaitaCss = ''
+                @define-color window_bg_color #${colors.base01};
+                @define-color window_fg_color #${colors.base05};
+
+                @define-color view_bg_color #${colors.base00};
+                @define-color view_fg_color #${colors.base05};
+
+                @define-color headerbar_bg_color #${colors.base02};
+                @define-color headerbar_fg_color #${colors.base05};
+                @define-color headerbar_border_color ${
+                  if isLight then "rgba(0, 0, 0, 0.07)" else "rgba(0, 0, 0, 0.36)"
+                };
+                @define-color headerbar_backdrop_color #${colors.base01};
+                @define-color headerbar_shade_color rgba(0, 0, 0, 0.36);
+
+                @define-color sidebar_bg_color #${colors.base02};
+                @define-color sidebar_fg_color #${colors.base05};
+                @define-color sidebar_backdrop_color #${colors.base01};
+                @define-color sidebar_border_color ${
+                  if isLight then "rgba(0, 0, 0, 0.07)" else "rgba(0, 0, 0, 0.36)"
+                };
+                @define-color sidebar_shade_color rgba(0, 0, 0, 0.25);
+
+                @define-color secondary_sidebar_bg_color #${colors.base02};
+                @define-color secondary_sidebar_fg_color #${colors.base05};
+                @define-color secondary_sidebar_backdrop_color #${colors.base01};
+                @define-color secondary_sidebar_border_color ${
+                  if isLight then "rgba(0, 0, 0, 0.07)" else "rgba(0, 0, 0, 0.36)"
+                };
+                @define-color secondary_sidebar_shade_color rgba(0, 0, 0, 0.25);
+
+                @define-color popover_bg_color #${colors.base03};
+                @define-color popover_fg_color #${colors.base05};
+                @define-color popover_shade_color rgba(0, 0, 0, 0.25);
+
+                @define-color dialog_bg_color #${colors.base03};
+                @define-color dialog_fg_color #${colors.base05};
+
+                @define-color card_bg_color ${if isLight then "#${colors.base00}" else "rgba(255, 255, 255, 0.08)"};
+                @define-color card_fg_color #${colors.base05};
+                @define-color card_shade_color rgba(0, 0, 0, 0.36);
+
+                @define-color thumbnail_bg_color #${colors.base02};
+                @define-color thumbnail_fg_color #${colors.base05};
+
+                @define-color shade_color rgba(0, 0, 0, 0.32);
+                @define-color scrollbar_outline_color rgba(0, 0, 0, 0.5);
+
+                @define-color destructive_bg_color #${colors.base08};
+                @define-color destructive_fg_color #${colors.base07};
+                @define-color destructive_color @destructive_bg_color;
+
+                @define-color success_bg_color #${colors.base0B};
+                @define-color success_fg_color #${colors.base07};
+                @define-color success_color @success_bg_color;
+
+                @define-color warning_bg_color #${colors.base0A};
+                @define-color warning_fg_color #${colors.base07};
+                @define-color warning_color @warning_bg_color;
+
+                @define-color error_bg_color #${colors.base08};
+                @define-color error_fg_color #${colors.base07};
+                @define-color error_color @error_bg_color;
+              '';
+
               gtkCss = ''
-                @define-color accent_bg_color ${accentHex};
-                @define-color accent_color @accent_bg_color;
+                ${libadwaitaCss}
+
                 @define-color accent_fg_color ${accentFgHex};
 
                 /* Chromium reads accent foreground from these GTK treeview
@@ -294,6 +440,7 @@
                   --accent-fg-color: @accent_fg_color;
                 }
               '';
+
             in
             [
               {
@@ -301,6 +448,38 @@
                   hmTargets
                   { gtk.extraCss = gtkCss; }
                 ];
+              }
+
+              # HM-plane mirror of the system disable above. Stylix declares
+              # `targets.gnome.enable` separately on the user plane, so the
+              # mkForce on system doesn't reach the HM activation that writes
+              # `themes/Stylix/gnome-shell/gnome-shell.css` and the
+              # user-theme dconf key. Disable here too.
+              { stylix.targets.gnome.enable = lib.mkForce false; }
+
+              # Reattach the dconf bits stylix's gnome target used to set:
+              # - color-scheme: follow stylix polarity.
+              # - wallpaper: when stylix.image is set.
+              # `accent-color` is owned by the gnome module (single writer
+              # to avoid double-definition when both modules are active);
+              # it reads `icedosLib.generateAccent` for the resolved name.
+              {
+                dconf.settings = {
+                  "org/gnome/desktop/interface" = {
+                    color-scheme = if cfg.polarity == "light" then "default" else "prefer-dark";
+                  };
+                }
+                // (
+                  if cfg.image != "" then
+                    {
+                      "org/gnome/desktop/background" = {
+                        picture-uri = "file://${cfg.image}";
+                        picture-uri-dark = "file://${cfg.image}";
+                      };
+                    }
+                  else
+                    { }
+                );
               }
             ];
         }

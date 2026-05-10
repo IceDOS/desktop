@@ -2,9 +2,8 @@
 enable = false
 autoEnable = true
 polarity = "dark"
-base16Scheme = "edge-dark"
+base16Scheme = ""
 image = ""
-accentBase16Slot = "base0E"
 disabledTargets = []
 
 [icedos.desktop.stylix.cursorTheme]
