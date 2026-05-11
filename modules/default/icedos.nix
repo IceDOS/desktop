@@ -21,6 +21,8 @@
         accentColor
         autologinUser
         bookmarks
+        defaultBrowser
+        defaultEditor
         timezone
         users
         wallpaper
@@ -32,6 +34,8 @@
     {
       accentColor = mkStrOption { default = accentColor; };
       autologinUser = mkStrOption { default = autologinUser; };
+      defaultBrowser = mkStrOption { default = defaultBrowser; };
+      defaultEditor = mkStrOption { default = defaultEditor; };
       timezone = mkStrOption { default = timezone; };
       wallpaper = mkStrOption { default = wallpaper; };
 
@@ -106,8 +110,8 @@
             optional
             ;
 
-          inherit (config.icedos) applications desktop users;
-          inherit (applications) defaultBrowser defaultEditor;
+          inherit (config.icedos) desktop users;
+          inherit (desktop) defaultBrowser defaultEditor;
           inherit (desktop) autologinUser timezone;
 
           resolved = generateAccent config;
