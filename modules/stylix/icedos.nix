@@ -314,6 +314,19 @@
             # dconf below. The `gtk` target stays on for libadwaita apps.
             { targets.gnome.enable = lib.mkForce false; }
 
+            # Stylix's `gtksourceview` target ships an overlay that patches
+            # all four gtksourceview variants (`gnome2.gtksourceview`,
+            # `gtksourceview`, `gtksourceview4`, `gtksourceview5`) to drop
+            # a generated `stylix.xml` color scheme into
+            # `share/gtksourceview-<v>/styles/`. Patching the derivations
+            # breaks cache hits and forces every dependent (gnome-calculator,
+            # gnome-text-editor, gnome-builder, gedit, meld, ...) to rebuild
+            # on every config change. Disable the target on both planes; the
+            # same xml is installed via `environment.systemPackages` below
+            # using the upstream mustache template + base16 renderer so the
+            # feature stays without mutating any nixpkgs derivation.
+            { targets.gtksourceview.enable = lib.mkForce false; }
+
             {
               cursor.name = if cfg.cursorTheme.name != "" then cfg.cursorTheme.name else autoCursorName;
 
@@ -335,6 +348,10 @@
             (mkIf (fontSet cfg.fonts.sansSerif) { fonts.sansSerif = mkFont cfg.fonts.sansSerif; })
             (mkIf (fontSet cfg.fonts.serif) { fonts.serif = mkFont cfg.fonts.serif; })
             (mkIf (fontSet cfg.fonts.emoji) { fonts.emoji = mkFont cfg.fonts.emoji; })
+
+            (mkIf ((cfg.fonts.sizes.applications or 0) > 0) {
+              fonts.sizes.applications = cfg.fonts.sizes.applications;
+            })
           ];
 
           home-manager.sharedModules =
@@ -456,6 +473,15 @@
               # `themes/Stylix/gnome-shell/gnome-shell.css` and the
               # user-theme dconf key. Disable here too.
               { stylix.targets.gnome.enable = lib.mkForce false; }
+
+              # HM-plane mirror of the system gtksourceview disable. Stylix's
+              # `gtksourceview` HM target writes the rendered `stylix.xml`
+              # into `~/.local/share/gtksourceview-<v>/styles/` via
+              # `xdg.dataFile`; the mkForce on system doesn't reach that
+              # activation, so disable on HM too. The replacement xml is
+              # shipped system-wide via `environment.systemPackages` above
+              # so HM-plane delivery is redundant anyway.
+              { stylix.targets.gtksourceview.enable = lib.mkForce false; }
 
               # Reattach the dconf bits stylix's gnome target used to set:
               # - color-scheme: follow stylix polarity.

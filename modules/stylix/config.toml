@@ -33,6 +33,9 @@ name = "Adwaita Sans"
 package = "noto-fonts-color-emoji"
 name = "Noto Color Emoji"
 
+[icedos.desktop.stylix.fonts.sizes]
+applications = 11
+
 # Per-target overrides for stylix theming. Each key matches a stylix target
 # (e.g. zed, alacritty, gtk, kitty, tmux, ...). `enable = false` disables that
 # one target even when the global `autoEnable` is true; `enable = true` does

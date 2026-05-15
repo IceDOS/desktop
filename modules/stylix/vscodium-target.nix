@@ -28,7 +28,7 @@
           };
         };
 
-        config = lib.mkIf (config.stylix.enable && cfg.enable) (
+        config = lib.mkIf ((config.stylix.enable or false) && cfg.enable) (
           let
             colors = config.lib.stylix.colors;
             fonts = config.stylix.fonts;
