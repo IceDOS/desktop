@@ -267,14 +267,10 @@
                     };
                   };
 
-                  xdg = {
-                    configFile."user-dirs.dirs".force = true;
-
-                    userDirs = {
-                      enable = true;
-                      createDirectories = true;
-                      setSessionVariables = true;
-                    };
+                  xdg.userDirs = {
+                    enable = true;
+                    createDirectories = true;
+                    setSessionVariables = true;
                   };
                 }
 
@@ -482,12 +478,6 @@
                     gtk4.theme = null; # Fallback for system versions lower than 26.05
                   };
 
-                  xdg.configFile = {
-                    "gtk-3.0/gtk.css".force = true;
-                    "gtk-3.0/settings.ini".force = true;
-                    "gtk-4.0/settings.ini".force = true;
-                  };
-
                   home = {
                     pointerCursor = {
                       gtk.enable = true;
@@ -498,7 +488,6 @@
                     };
 
                     file.".config/gtk-4.0/gtk.css" = mkIf (!hasCosmicGtkTheming) {
-                      force = true;
                       text = gtkCss;
                     };
                   };

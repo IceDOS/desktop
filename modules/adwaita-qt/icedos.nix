@@ -168,8 +168,6 @@
                 {
                   xdg.configFile =
                     let
-                      force = true;
-
                       styleColors =
                         qt6ct:
                         mkStyleColors {
@@ -234,22 +232,18 @@
                     in
                     {
                       "qt5ct/qt5ct.conf" = {
-                        inherit force;
                         text = qtConf false;
                       };
 
                       "qt5ct/style-colors.conf" = {
-                        inherit force;
                         text = styleColors false;
                       };
 
                       "qt6ct/qt6ct.conf" = {
-                        inherit force;
                         text = qtConf true;
                       };
 
                       "qt6ct/style-colors.conf" = {
-                        inherit force;
                         text = styleColors true;
                       };
                     };
