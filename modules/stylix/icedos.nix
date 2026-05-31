@@ -300,7 +300,27 @@
             # `qtct` works) and (b) maps to the deprecated nixpkgs value
             # `qt.platformTheme.name = "gnome"`. Pin to qtct to silence
             # both warnings and route Qt apps through the supported path.
-            { targets.qt.platform = lib.mkForce "qtct"; }
+            # (Skipped under Plasma — the qt target is disabled there, below.)
+            (mkIf (!config.services.desktopManager.plasma6.enable) {
+              targets.qt.platform = lib.mkForce "qtct";
+            })
+
+            # NixOS-plane mirror of the HM-plane qt-target kill further down.
+            # Stylix ships a SECOND qt target on the system plane
+            # (`modules/qt/nixos.nix`); the HM `mkForce false` doesn't reach it,
+            # so under Plasma it stayed enabled and — because the `qtct` pin
+            # above overrode its plasma6 auto-pick of "kde" — set
+            # `qt.platformTheme = "qt5ct"`, exporting `QT_QPA_PLATFORMTHEME=qt5ct`
+            # into the session. That routed every Qt app through qt5ct instead
+            # of Plasma's KDE platform theme, so QtQuick/Kirigami apps (System
+            # Settings, Discover) fell back to the light QQC2 style while QWidget
+            # apps (Dolphin) read the dark palette — half-themed. Plasma owns Qt
+            # theming via the `kde` target + plasma-integration, so disable this
+            # plane too; with no `QT_QPA_PLATFORMTHEME` override the KDE platform
+            # theme loads automatically and QQC2 uses `org.kde.desktop`.
+            (mkIf config.services.desktopManager.plasma6.enable {
+              targets.qt.enable = lib.mkForce false;
+            })
 
             # Stylix's `gnome` target rewrites the entire gnome-shell theme
             # via a base16-mustache SCSS render, plus patches gnome-shell to
@@ -482,6 +502,18 @@
               # shipped system-wide via `environment.systemPackages` above
               # so HM-plane delivery is redundant anyway.
               { stylix.targets.gtksourceview.enable = lib.mkForce false; }
+
+              # HM-plane qt target kill under Plasma 6. Stylix's HM qt target
+              # hardcodes `qt.style.name = "kvantum"` → exports
+              # QT_STYLE_OVERRIDE=kvantum into ~/.config/environment.d. Plasma 6's
+              # QQC2 then `import kvantum` in every plasmashell/kwin/spectacle QML,
+              # fails ("module kvantum is not installed" — nixpkgs ships only the
+              # kvantum Qt Widgets style, no QQC2 module) and plasmashell never
+              # paints. Plasma owns Qt theming via the `kde` target + plasma-apply-*,
+              # so the qt target is redundant under Plasma anyway.
+              (mkIf config.services.desktopManager.plasma6.enable {
+                stylix.targets.qt.enable = lib.mkForce false;
+              })
 
               # Reattach the dconf bits stylix's gnome target used to set:
               # - color-scheme: follow stylix polarity.
