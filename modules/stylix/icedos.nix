@@ -104,8 +104,6 @@
     [
       { imports = [ inputs.stylix.nixosModules.stylix ]; }
 
-      (import ./vscodium-target.nix { inherit inputs; })
-
       (
         {
           config,
