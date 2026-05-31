@@ -384,6 +384,30 @@
 
               isLight = config.stylix.polarity == "light";
 
+              systemPlasma6 = config.services.desktopManager.plasma6.enable;
+
+              # Stylix's KDE target hardcodes the Plasma color scheme's
+              # [Colors:Selection] foregrounds to base00 (dark), so selected
+              # list items / highlighted text paint black on the accent fill
+              # instead of the accent-foreground used everywhere else (the GTK
+              # path gets accentFgHex below). Recompute that accent foreground
+              # as an "R,G,B" triple — base07 on dark, base00 on light, the
+              # same slot accentFgHex uses — and patch only that section of
+              # stylix's generated `.colors`, shipped at XDG_DATA_HOME priority
+              # below so it overrides the read-only profile copy.
+              kdeSelectionFgSlot = if isLight then "base00" else "base07";
+
+              kdeSelectionFgRgb = lib.concatMapStringsSep "," (c: colors."${kdeSelectionFgSlot}-rgb-${c}") [
+                "r"
+                "g"
+                "b"
+              ];
+
+              # Mirrors stylix's own colorschemeSlug derivation (modules/kde/hm.nix).
+              kdeColorschemeSlug = lib.concatStrings (
+                lib.filter lib.isString (builtins.split "[^a-zA-Z]" colors.scheme)
+              );
+
               # libadwaita's named-color set drives every modern GTK4 app's
               # surfaces (Files, Console, Settings, Calendar, Calculator, ...).
               # Stylix's stock gtk target only writes the older `theme_*_color`
@@ -502,6 +526,32 @@
               # shipped system-wide via `environment.systemPackages` above
               # so HM-plane delivery is redundant anyway.
               { stylix.targets.gtksourceview.enable = lib.mkForce false; }
+
+              # Ship the selection-fixed Plasma color scheme at XDG_DATA_HOME
+              # priority so plasma-apply-lookandfeel resolves it ahead of the
+              # stylix profile copy (same slug). Reuses stylix's own generated
+              # `.colors` and rewrites only the [Colors:Selection] foregrounds,
+              # so any other stylix color stays authoritative. Plasma 6 only.
+              (
+                { config, ... }:
+                lib.mkIf systemPlasma6 {
+                  home.file.".local/share/color-schemes/${kdeColorschemeSlug}.colors".source =
+                    let
+                      stylixKdeTheme = lib.findFirst (p: lib.getName p == "stylix-kde-theme") null config.home.packages;
+
+                      patched = pkgs.runCommandLocal "stylix-kde-selection-fix" { } ''
+                        mkdir --parents "$out/share/color-schemes"
+                        ${pkgs.gawk}/bin/awk -v fg='${kdeSelectionFgRgb}' '
+                          /^\[/ { sel = ($0 == "[Colors:Selection]") }
+                          sel && /^Foreground(Normal|Active|Inactive|Link|Visited)=/ { sub(/=.*/, "=" fg) }
+                          { print }
+                        ' "${stylixKdeTheme}/share/color-schemes/${kdeColorschemeSlug}.colors" \
+                          > "$out/share/color-schemes/${kdeColorschemeSlug}.colors"
+                      '';
+                    in
+                    "${patched}/share/color-schemes/${kdeColorschemeSlug}.colors";
+                }
+              )
 
               # HM-plane qt target kill under Plasma 6. Stylix's HM qt target
               # hardcodes `qt.style.name = "kvantum"` → exports
