@@ -1,6 +1,7 @@
 [icedos.desktop]
 accentColor = "" # Accepts a libadwaita name (blue/teal/green/yellow/orange/red/pink/purple/slate), a base16 slot (base08..base0F, only meaningful when stylix is on), or a hex (RRGGBB / #RRGGBB). Empty defaults to "purple". Under GNOME, non-name inputs trigger a warning since GNOME's accent-color dconf key only accepts named values.
 autologinUser = ""
+keyboardLayouts = [] # xkb layouts, e.g. ["us", "gr"] (first is primary). Empty = leave each DE at its own default (no layout override).
 timezone = "Europe/Bucharest"
 wallpaper = "" # Absolute path to image. Empty = user/UI-managed (no rebuild override).
 

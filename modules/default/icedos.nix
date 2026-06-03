@@ -11,6 +11,7 @@
         mkBoolOption
         mkListOption
         mkNumberOption
+        mkStrListOption
         mkStrOption
         mkUsersOption
         ;
@@ -23,6 +24,7 @@
         bookmarks
         defaultBrowser
         defaultEditor
+        keyboardLayouts
         timezone
         users
         wallpaper
@@ -36,6 +38,7 @@
       autologinUser = mkStrOption { default = autologinUser; };
       defaultBrowser = mkStrOption { default = defaultBrowser; };
       defaultEditor = mkStrOption { default = defaultEditor; };
+      keyboardLayouts = mkStrListOption { default = keyboardLayouts; };
       timezone = mkStrOption { default = timezone; };
       wallpaper = mkStrOption { default = wallpaper; };
 

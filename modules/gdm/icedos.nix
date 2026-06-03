@@ -18,6 +18,7 @@
         }:
 
         let
+          inherit (config.icedos.desktop) keyboardLayouts;
           inherit (config.icedos.desktop.gdm) autoSuspend;
         in
         {
@@ -29,7 +30,7 @@
 
             xserver = {
               enable = true;
-              xkb.layout = "us,gr";
+              xkb.layout = lib.mkIf (keyboardLayouts != [ ]) (lib.concatStringsSep "," keyboardLayouts);
             };
           };
 
