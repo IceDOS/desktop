@@ -9,6 +9,7 @@
     let
       inherit (icedosLib)
         mkBoolOption
+        mkIntBetweenOption
         mkListOption
         mkNumberOption
         mkStrListOption
@@ -22,6 +23,7 @@
         accentColor
         autologinUser
         bookmarks
+        clock
         defaultBrowser
         defaultEditor
         keyboardLayouts
@@ -42,6 +44,14 @@
       timezone = mkStrOption { default = timezone; };
       wallpaper = mkStrOption { default = wallpaper; };
 
+      clock = {
+        date = mkBoolOption { default = clock.date; };
+        firstDayOfTheWeek = mkStrOption { default = clock.firstDayOfTheWeek; };
+        hourFormat24 = mkBoolOption { default = clock.hourFormat24; };
+        seconds = mkBoolOption { default = clock.seconds; };
+        weekday = mkBoolOption { default = clock.weekday; };
+      };
+
       bookmarks = {
         documents = mkBoolOption { default = bookmarks.documents; };
         downloads = mkBoolOption { default = bookmarks.downloads; };
@@ -52,7 +62,7 @@
         templates = mkBoolOption { default = bookmarks.templates; };
         extras = mkListOption { default = bookmarks.extras; } (
           with lib.types;
-          either str (subookmarksodule {
+          either str (submodule {
             options = {
               path = mkStrOption { };
               name = mkStrOption { default = ""; };
@@ -66,6 +76,16 @@
         activeHintSize = mkNumberOption { default = windows.activeHintSize; };
         maximizeButton = mkBoolOption { default = windows.maximizeButton; };
         minimizeButton = mkBoolOption { default = windows.minimizeButton; };
+
+        focus = {
+          followMouse = mkBoolOption { default = windows.focus.followMouse; };
+
+          delay = mkIntBetweenOption {
+            path = "icedos.desktop.windows.focus.delay";
+            source = ./config.toml;
+            default = windows.focus.delay;
+          } 0 3000;
+        };
       };
 
       users = mkUsersOption {

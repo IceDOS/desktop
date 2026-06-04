@@ -5,6 +5,13 @@ keyboardLayouts = [] # xkb layouts, e.g. ["us", "gr"] (first is primary). Empty 
 timezone = "Europe/Bucharest"
 wallpaper = "" # Absolute path to image. Empty = user/UI-managed (no rebuild override).
 
+[icedos.desktop.clock]
+date = false # Show the month and day of the month on the clock
+firstDayOfTheWeek = "monday" # monday, tuesday, wednesday, thursday, friday, saturday, sunday
+hourFormat24 = true # false = 12-hour AM/PM
+seconds = true
+weekday = false # Show the day of the week on the clock
+
 [icedos.desktop.bookmarks]
 extras = []
 documents = true
@@ -20,6 +27,10 @@ activeHint = true
 activeHintSize = 1
 maximizeButton = true
 minimizeButton = true
+
+[icedos.desktop.windows.focus]
+delay = 300 # ms; only applies when focus follows the mouse
+followMouse = false # Focus follows the mouse cursor instead of click-to-focus
 
 [icedos.desktop.users.username.idle.disableMonitors]
 enable = true
