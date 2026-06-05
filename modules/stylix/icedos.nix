@@ -345,6 +345,19 @@
             # feature stays without mutating any nixpkgs derivation.
             { targets.gtksourceview.enable = lib.mkForce false; }
 
+            # Stylix's `nixos-icons` overlay recolours the NixOS snowflake to
+            # the active scheme and embeds it as the GDM greeter logo via gdm's
+            # `org.gnome.login-screen.gschema.override`. That repoints the
+            # override at the overlaid nixos-icons store path, changing the
+            # `gdm` derivation. gnome-shell build-depends on gdm (libgdm), so
+            # gnome-shell rebuilds, and gnome-session / gnome-initial-setup /
+            # gnome-tweaks / gnome-browser-connector cascade — none cached,
+            # forcing a full local GNOME-stack compile on every nixpkgs bump.
+            # Disable the target so the greeter keeps the cached upstream logo
+            # and the GNOME closure substitutes from cache. (Same cache
+            # rationale as the gnome / gtksourceview disables above.)
+            { targets.nixos-icons.enable = lib.mkForce false; }
+
             {
               cursor.name = if cfg.cursorTheme.name != "" then cfg.cursorTheme.name else autoCursorName;
 
