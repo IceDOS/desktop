@@ -78,7 +78,7 @@
         minimizeButton = mkBoolOption { default = windows.minimizeButton; };
 
         focus = {
-          followMouse = mkBoolOption { default = windows.focus.followMouse; };
+          followsMouse = mkBoolOption { default = windows.focus.followsMouse; };
 
           delay = mkIntBetweenOption {
             path = "icedos.desktop.windows.focus.delay";

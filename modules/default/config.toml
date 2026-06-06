@@ -30,7 +30,7 @@ minimizeButton = true
 
 [icedos.desktop.windows.focus]
 delay = 300 # ms; only applies when focus follows the mouse
-followMouse = false # Focus follows the mouse cursor instead of click-to-focus
+followsMouse = false # Focus follows the mouse cursor instead of click-to-focus
 
 [icedos.desktop.users.username.idle.disableMonitors]
 enable = true
