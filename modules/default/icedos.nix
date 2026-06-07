@@ -31,6 +31,7 @@
         users
         wallpaper
         windows
+        xdgDesktopPortal
         ;
 
       inherit (users.username) idle;
@@ -106,6 +107,10 @@
           };
         };
       };
+
+      xdgDesktopPortal.forceGtkFilePicker = mkBoolOption {
+        default = xdgDesktopPortal.forceGtkFilePicker;
+      };
     };
 
   outputs.nixosModules =
@@ -131,14 +136,20 @@
             mkIf
             mkMerge
             optional
+            optionalAttrs
             ;
 
           inherit (config.icedos) desktop users;
-          inherit (desktop) defaultBrowser defaultEditor;
-          inherit (desktop) autologinUser timezone;
+
+          inherit (desktop)
+            autologinUser
+            defaultBrowser
+            defaultEditor
+            timezone
+            xdgDesktopPortal
+            ;
 
           resolved = generateAccent config;
-
           inherit (resolved) hex stylixOn;
 
           stylixEnabled = stylixOn;
@@ -222,7 +233,12 @@
           };
 
           xdg = {
-            portal.config.common.default = "*";
+            portal.config.common = {
+              default = "*";
+            }
+            // optionalAttrs xdgDesktopPortal.forceGtkFilePicker {
+              "org.freedesktop.impl.portal.FileChooser" = "gtk";
+            };
 
             mime = {
               enable = true;
