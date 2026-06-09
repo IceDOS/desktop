@@ -247,6 +247,72 @@
             else
               "Papirus-Light";
 
+          # GTK4's strict symbolic-SVG renderer ignores <g> and rejects invalid
+          # attrs, so ~325 of Tela's symbolic icons (path wrapped in
+          # <g transform> -> drawn off the 16x16 viewBox; or stray stop-color /
+          # stroke attrs -> conversion fails) render blank in libadwaita apps
+          # (LACT etc.) under stylix, which forces Tela as the GTK icon theme.
+          # (KDE/Qt have a tolerant icon engine, so Tela works there; without
+          # stylix the GTK theme is breeze/Adwaita, already GTK-clean.)
+          #
+          # Build a GTK-only variant ("<name>-gtk") that keeps Tela's colour
+          # icons, and repairs the symbolic ones in place with one svgo folder
+          # pass: strip the bad attrs, flatten transforms into path coords ->
+          # keeps the Tela glyph, renders in GTK4. ~1378/1534 repair cleanly
+          # (incl. every window/dialog/+- control + sidebar glyph); the ~156
+          # svgo can't flatten (rect/matrix combos) stay blank, but they're
+          # obscure status/app icons absent from GTK app chrome. Point ONLY the
+          # HM gtk.iconTheme plane at it (below); Plasma (kdeglobals) and COSMIC
+          # (toolkit RON) keep full Tela, and the distinct -gtk name stops the
+          # variant shadowing Tela for Qt. No nixpkgs derivation is patched, so
+          # cache hits are preserved (same rationale as the gtksourceview /
+          # nixos-icons disables above).
+          gtkIconsPackage =
+            let
+              svgoFlatten = pkgs.writeText "svgo.config.cjs" ''
+                module.exports = {
+                  plugins: [
+                    {
+                      name: "preset-default",
+                      params: {
+                        overrides: {
+                          removeViewBox: false,
+                          convertShapeToPath: { convertArcs: true },
+                          convertPathData: { applyTransforms: true, applyTransformsStroked: true },
+                          mergePaths: false,
+                        },
+                      },
+                    },
+                  ],
+                };
+              '';
+            in
+            pkgs.runCommandLocal "${iconsPackage.name}-gtk-symbolic" { } ''
+              export HOME="$TMPDIR"
+              for variant in ${autoIconsDark} ${autoIconsLight}; do
+                src="${iconsPackage}/share/icons/$variant"
+                [ -e "$src" ] || continue
+                dst="$out/share/icons/$variant-gtk"
+                mkdir -p "$dst"
+                # Colour icons + index.theme: symlink (unchanged Tela). Drop the
+                # symbolic/ symlink + stale cache; symbolic is rebuilt below.
+                for f in "$src"/*; do
+                  case "$(basename "$f")" in
+                    symbolic | icon-theme.cache) ;;
+                    *) ln -s "$f" "$dst/" ;;
+                  esac
+                done
+                # Symbolic: real (deref) copy so it's writable, strip the
+                # GTK4-invalid attrs, then flatten transforms into path coords
+                # with one svgo folder pass.
+                cp -rL "$src/symbolic" "$dst/symbolic"
+                chmod -R u+w "$dst/symbolic"
+                find "$dst/symbolic" -name '*.svg' -exec \
+                  sed -i -E 's/ (style|class|stop-color|paint-order|stroke[a-z-]*|fill-rule)="[^"]*"//g' {} +
+                ${pkgs.svgo}/bin/svgo --config ${svgoFlatten} -rf "$dst/symbolic" -o "$dst/symbolic" >/dev/null 2>&1 || true
+              done
+            '';
+
           mkFont = font: {
             inherit (font) name;
             package = resolvePkg font.package;
@@ -521,6 +587,25 @@
                   { gtk.extraCss = gtkCss; }
                 ];
               }
+
+              # GTK-plane-only symbolic icon fix: repoint gtk.iconTheme (set by
+              # stylix/hm/icons.nix) at the Adwaita-symbolic variant so
+              # libadwaita apps get GTK4-clean symbolic SVGs. dconf icon-theme
+              # and gtk-{3,4}.0/settings.ini follow the name automatically.
+              # Re-add the FULL theme to home.packages: repointing
+              # gtk.iconTheme.package was the only thing installing it under
+              # stylix, and Plasma (kdeglobals) + COSMIC (toolkit RON) still
+              # resolve "Tela-black-dark" by name, so it must stay on the path.
+              (
+                { config, lib, ... }:
+                lib.mkIf cfg.iconTheme.enable {
+                  gtk.iconTheme.package = lib.mkForce gtkIconsPackage;
+                  gtk.iconTheme.name = lib.mkForce "${
+                    if config.stylix.polarity == "light" then autoIconsLight else autoIconsDark
+                  }-gtk";
+                  home.packages = [ iconsPackage ];
+                }
+              )
 
               # HM-plane mirror of the system disable above. Stylix declares
               # `targets.gnome.enable` separately on the user plane, so the
