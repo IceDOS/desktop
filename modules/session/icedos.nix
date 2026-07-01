@@ -12,7 +12,7 @@
         }:
 
         let
-          inherit (config.icedos.applications.toolset) desktopEntries;
+          inherit (config.icedos.system.toolset) desktopEntries;
 
           inherit (lib) optional;
 
@@ -26,7 +26,7 @@
           '';
         in
         {
-          icedos.applications.toolset.sessionCommands = [
+          icedos.system.toolset.sessionCommands = [
             {
               command = "lock";
               script = "${pkgs.systemd}/bin/loginctl lock-session";

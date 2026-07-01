@@ -4,7 +4,7 @@
     { ... }:
     [
       {
-        icedos.applications.toolset.commands = [
+        icedos.system.toolset.commands = [
           {
             command = "clear-portals";
 

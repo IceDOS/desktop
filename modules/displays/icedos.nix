@@ -28,7 +28,7 @@
           primaryDisplayPath = "${tempConfigPath}/primary-display";
         in
         {
-          icedos.applications.toolset.commands = mkIf (gnome || hyprland) [
+          icedos.system.toolset.commands = mkIf (gnome || hyprland) [
             {
               command = "displays";
               help = "print displays related commands";
