@@ -288,6 +288,8 @@
               { config, lib, ... }:
               mkMerge [
                 {
+                  home.pointerCursor.enable = true;
+
                   # Adopt the 26.05+ default to silence the legacy warning
                   # regardless of stylix state; specific blocks below can override.
                   gtk.gtk4.theme = mkDefault null;
@@ -519,6 +521,7 @@
 
                   home = {
                     pointerCursor = {
+                      enable = true;
                       gtk.enable = true;
                       x11.enable = true;
                       package = bibata-cursors;
