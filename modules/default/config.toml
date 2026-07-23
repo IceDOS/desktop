@@ -32,7 +32,7 @@ minimizeButton = true
 delay = 300 # ms; only applies when focus follows the mouse
 followsMouse = false # Focus follows the mouse cursor instead of click-to-focus
 
-[icedos.desktop.users.username.idle.disableMonitors]
+[icedos.desktop.users.username.idle.disable-monitors]
 enable = true
 seconds = 600
 
@@ -44,5 +44,5 @@ seconds = 900
 enable = true
 seconds = 1800
 
-[icedos.desktop.xdgDesktopPortal]
+[icedos.desktop.xdg-desktop-portal]
 forceGtkFilePicker = false

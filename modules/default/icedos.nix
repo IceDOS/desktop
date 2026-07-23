@@ -31,7 +31,7 @@
         users
         wallpaper
         windows
-        xdgDesktopPortal
+        xdg-desktop-portal
         ;
 
       inherit (users.username) idle;
@@ -91,9 +91,9 @@
 
       users = mkUsersOption {
         idle = {
-          disableMonitors = {
-            enable = mkBoolOption { default = idle.disableMonitors.enable; };
-            seconds = mkNumberOption { default = idle.disableMonitors.seconds; };
+          disable-monitors = {
+            enable = mkBoolOption { default = idle.disable-monitors.enable; };
+            seconds = mkNumberOption { default = idle.disable-monitors.seconds; };
           };
 
           lock = {
@@ -108,8 +108,8 @@
         };
       };
 
-      xdgDesktopPortal.forceGtkFilePicker = mkBoolOption {
-        default = xdgDesktopPortal.forceGtkFilePicker;
+      xdg-desktop-portal.forceGtkFilePicker = mkBoolOption {
+        default = xdg-desktop-portal.forceGtkFilePicker;
       };
     };
 
@@ -146,7 +146,7 @@
             defaultBrowser
             defaultEditor
             timezone
-            xdgDesktopPortal
+            xdg-desktop-portal
             ;
 
           resolved = generateAccent config;
@@ -236,7 +236,7 @@
             portal.config.common = {
               default = "*";
             }
-            // optionalAttrs xdgDesktopPortal.forceGtkFilePicker {
+            // optionalAttrs xdg-desktop-portal.forceGtkFilePicker {
               "org.freedesktop.impl.portal.FileChooser" = "gtk";
             };
 
