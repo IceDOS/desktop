@@ -4,8 +4,8 @@
   options.icedos.desktop.users =
     let
       inherit (icedosLib) mkStrOption mkSubmoduleAttrsOption;
-      inherit (lib) readFile;
-      inherit ((fromTOML (readFile ./config.toml)).icedos.desktop.users.username) startupScript;
+      inherit (lib) importTOML;
+      inherit ((importTOML ./config.toml).icedos.desktop.users.username) startupScript;
     in
     mkSubmoduleAttrsOption { } {
       startupScript = mkStrOption { default = startupScript; };

@@ -3,9 +3,9 @@
 {
   options.icedos.desktop.entries =
     let
-      inherit (lib) readFile types;
+      inherit (lib) importTOML types;
       inherit (icedosLib) mkListOption;
-      inherit ((fromTOML (readFile ./config.toml)).icedos.desktop) entries;
+      inherit ((importTOML ./config.toml).icedos.desktop) entries;
     in
     mkListOption { default = entries; } types.attrs;
 

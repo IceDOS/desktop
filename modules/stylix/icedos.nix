@@ -16,9 +16,9 @@
         mkStrOption
         ;
 
-      inherit (lib) readFile;
+      inherit (lib) importTOML;
 
-      inherit ((fromTOML (readFile ./config.toml)).icedos.desktop.stylix)
+      inherit ((importTOML ./config.toml).icedos.desktop.stylix)
         autoEnable
         base16Scheme
         cursorTheme
@@ -125,7 +125,7 @@
             mapAttrs
             mkIf
             mkMerge
-            readFile
+            importTOML
             recursiveUpdate
             removeSuffix
             ;
@@ -136,7 +136,7 @@
           # so re-merge module TOML defaults with the user's partial value to
           # keep `cfg.iconTheme.enable` etc. resolvable when the user only sets
           # a subset of keys.
-          tomlDefaults = (fromTOML (readFile ./config.toml)).icedos.desktop.stylix;
+          tomlDefaults = (importTOML ./config.toml).icedos.desktop.stylix;
           rawCfg = config.icedos.desktop.stylix;
 
           cfg = rawCfg // {

@@ -3,8 +3,8 @@
 {
   options.icedos.desktop.gdm.autoSuspend =
     let
-      inherit (lib) readFile;
-      inherit ((fromTOML (readFile ./config.toml)).icedos.desktop.gdm) autoSuspend;
+      inherit (lib) importTOML;
+      inherit ((importTOML ./config.toml).icedos.desktop.gdm) autoSuspend;
     in
     icedosLib.mkBoolOption { default = autoSuspend; };
 

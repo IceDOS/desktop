@@ -17,9 +17,9 @@
         mkUsersOption
         ;
 
-      inherit (lib) readFile;
+      inherit (lib) importTOML;
 
-      inherit ((fromTOML (readFile ./config.toml)).icedos.desktop)
+      inherit ((importTOML ./config.toml).icedos.desktop)
         accentColor
         autologinUser
         bookmarks

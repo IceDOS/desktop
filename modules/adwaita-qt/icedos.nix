@@ -4,8 +4,8 @@
   options.icedos.desktop =
     let
       inherit (icedosLib) mkBoolOption;
-      inherit (lib) readFile;
-      inherit ((fromTOML (readFile ./config.toml)).icedos.desktop) themeQt;
+      inherit (lib) importTOML;
+      inherit ((importTOML ./config.toml).icedos.desktop) themeQt;
     in
     {
       themeQt = mkBoolOption { default = themeQt; };
