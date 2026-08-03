@@ -111,11 +111,11 @@
                             ${echo} "Set X11 primary display to $PRIMARY_DISPLAY"
                           }
 
+                          ${coreutils}/bin/mkdir -p "$TEMP_CONFIG_PATH"
                           setPrimaryMonitor "$PRIMARY_DISPLAY"
 
                           while :; do
                             ${coreutils}/bin/sleep 1
-                            ${coreutils}/bin/mkdir -p "$TEMP_CONFIG_PATH"
 
                             CURRENT_PRIMARY_DISPLAY="$PRIMARY_DISPLAY"
                             [ -f "$PRIMARY_DISPLAY_PATH" ] && CURRENT_PRIMARY_DISPLAY=$(${coreutils}/bin/cat "$PRIMARY_DISPLAY_PATH")
