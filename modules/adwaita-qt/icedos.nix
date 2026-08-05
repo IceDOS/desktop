@@ -29,14 +29,22 @@
           inherit (icedosLib) generateAccent;
 
           inherit (lib)
+            assertMsg
             mkForce
             mkIf
             mkMerge
             ;
 
           resolved = generateAccent config;
-          accentColor = resolved.hex;
-          stylixAccent = resolved.hex;
+
+          # accent is expected as "#rrggbb"; assert so a non-hex accent fails
+          # eval loudly instead of producing a malformed palette / patch.
+          accentColor =
+            assert assertMsg (
+              builtins.match "#[0-9a-fA-F]{6}" resolved.hex != null
+            ) "icedos.desktop accentColor resolved to '${resolved.hex}', expected #rrggbb";
+            resolved.hex;
+          stylixAccent = accentColor;
           stylixEnabled = resolved.stylixOn;
 
           # Qt palette (20/21 fields). Positions 12/14/15 are Highlight/Link/LinkVisited
@@ -45,8 +53,13 @@
           mkStyleColors =
             { qt6ct, accent }:
             let
-              inherit (builtins) substring stringLength;
-              a = substring 1 (stringLength accent - 1) accent;
+              inherit (builtins) match stringLength substring;
+
+              # accent is expected as "#rrggbb"; assert so a non-hex accent
+              # fails eval loudly instead of producing a malformed palette.
+              a =
+                assert (match "#[0-9a-fA-F]{6}" accent != null);
+                substring 1 (stringLength accent - 1) accent;
             in
             ''
               [ColorScheme]
