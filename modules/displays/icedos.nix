@@ -24,7 +24,16 @@
 
           gnome = hasAttr "gnome" desktop;
           hyprland = hasAttr "hyprland" desktop;
-          tempConfigPath = "/tmp/icedos";
+
+          # Per-user state: /tmp is world-writable and shared across users, so
+          # a local process could pre-create the path / symlink the file and
+          # the xprimary service's `echo >` would clobber it (and two logged-in
+          # users would fight over the same file). XDG_RUNTIME_DIR is a 0700
+          # per-user tmpfs; fall back to the user cache when unset. The `\$`
+          # escape keeps the shell parameter expansion literal so both the
+          # toolset command and the systemd service expand the same path at
+          # runtime.
+          tempConfigPath = "\${XDG_RUNTIME_DIR:-$HOME/.cache}/icedos";
           primaryDisplayPath = "${tempConfigPath}/primary-display";
         in
         {
@@ -59,11 +68,11 @@
                 script = ''
                   [ "$XDG_CURRENT_DESKTOP" = "GNOME" ] && echo "error: not supported by gnome" && exit 1
 
-                  ACTIVE_MONITORS=($(xrandr --listactivemonitors | grep '+0' | awk '{ print $4 }' | sort))
+                  ACTIVE_MONITORS=($(${pkgs.xorg.xrandr}/bin/xrandr --listactivemonitors | ${pkgs.gnugrep}/bin/grep '+0' | ${pkgs.gawk}/bin/awk '{ print $4 }' | ${pkgs.coreutils}/bin/sort))
                   TEMP_CONFIG_PATH="${tempConfigPath}"
                   PRIMARY_DISPLAY_PATH="${primaryDisplayPath}"
 
-                  mkdir -p "$TEMP_CONFIG_PATH"
+                  ${pkgs.coreutils}/bin/mkdir -p "$TEMP_CONFIG_PATH"
                   echo "Select a display:"
 
                   select monitor in "''${ACTIVE_MONITORS[@]}"; do
@@ -120,6 +129,14 @@
                             CURRENT_PRIMARY_DISPLAY="$PRIMARY_DISPLAY"
                             [ -f "$PRIMARY_DISPLAY_PATH" ] && CURRENT_PRIMARY_DISPLAY=$(${coreutils}/bin/cat "$PRIMARY_DISPLAY_PATH")
 
+                            # The state file is user-writable, so the name is
+                            # untrusted — guard it before it can reach xrandr
+                            # and keep the last good primary on mismatch.
+                            [[ "$CURRENT_PRIMARY_DISPLAY" =~ ^[A-Za-z0-9.-]+$ ]] || {
+                              ${echo} "xprimary: ignoring invalid monitor name '$CURRENT_PRIMARY_DISPLAY'" >&2
+                              CURRENT_PRIMARY_DISPLAY="$PRIMARY_DISPLAY"
+                            }
+
                             [[ "$CURRENT_PRIMARY_DISPLAY" == "$PRIMARY_DISPLAY" && "$(${xrandr} --current | ${pkgs.gnugrep}/bin/grep primary | ${pkgs.gawk}/bin/awk '{print $1}')" == "$CURRENT_PRIMARY_DISPLAY" ]] && continue
 
                             PRIMARY_DISPLAY="$CURRENT_PRIMARY_DISPLAY"
@@ -127,7 +144,6 @@
                           done
                         ''}";
 
-                      Nice = "-20";
                       Restart = "on-failure";
                     };
                   };
