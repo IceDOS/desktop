@@ -37,3 +37,15 @@ checkout (`path:/abs/path/to/desktop`), then `icedos rebuild --build` (no activa
 - **stylix** carries several IceDOS-specific quirks (Qt target disabled under Plasma6,
   KDE selection-fg patch, GDM/nixos-icons target disabled to avoid rebuilds). Check the
   module before changing theming behavior.
+- **displays**: the xprimary state file lives at
+  `${XDG_RUNTIME_DIR:-$HOME/.cache}/icedos/primary-display` (per-user; never `/tmp`,
+  which is shared/world-writable). Both the `displays xprimary` toolset command and the
+  `xprimary` systemd user service must resolve the same path — keep the shared
+  `tempConfigPath`/`primaryDisplayPath` let-bindings in sync if either changes. The
+  service validates the name read back from the file before passing it to xrandr.
+- **entries** (`icedos.desktop.entries`): every entry must carry a non-empty string
+  `id` (it becomes the desktop-entry key); enforced by a point-of-use throw when the
+  desktop-entries map is evaluated.
+- **clear-xdg-portals** uses `rm -rf --` and the `/run/wrappers/bin/sudo` setuid
+  wrapper (a store-path sudo is not setuid), with `[ -e ]` guards on the system-wide
+  deletions.
