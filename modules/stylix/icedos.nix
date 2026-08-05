@@ -190,13 +190,19 @@
           # attrset in Nix, so passing the derivation directly trips
           # base16.nix's `isAttrs` branch and parsing fails. Interpolating
           # forces path-string treatment.
-          accentPatchedBase16Scheme = "${pkgs.runCommandLocal "icedos-base16-accent.yaml" { } ''
-            cp ${resolvedBase16Scheme} $out
-            chmod u+w $out
-            ${pkgs.gnused}/bin/sed -i -E \
-              's/(^[[:space:]]*base0D:[[:space:]]*"?#?)[0-9a-fA-F]{6}("?)/\1${resolved.hexNoHash}\2/' \
-              $out
-          ''}";
+          #
+          # The sed replacement splices the accent verbatim; assert the 6-hex
+          # contract so a non-hex accent fails eval loudly instead of silently
+          # emitting a stale/malformed palette.
+          accentPatchedBase16Scheme =
+            assert (builtins.match "[0-9a-fA-F]{6}" resolved.hexNoHash != null);
+            "${pkgs.runCommandLocal "icedos-base16-accent.yaml" { } ''
+              cp ${resolvedBase16Scheme} $out
+              chmod u+w $out
+              ${pkgs.gnused}/bin/sed -i -E \
+                's/(^[[:space:]]*base0D:[[:space:]]*"?#?)[0-9a-fA-F]{6}("?)/\1${resolved.hexNoHash}\2/' \
+                $out
+            ''}";
 
           # Slot-input under stylix gets the theme-specific accent name (e.g.
           # catppuccin's `mauve`/`flamingo`). Name and hex inputs already
