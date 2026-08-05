@@ -17,15 +17,23 @@
         let
           inherit (lib) listToAttrs;
           inherit (config.icedos.desktop) entries;
+
+          validEntry = e: e ? id && builtins.isString e.id && e.id != "";
         in
         {
           home-manager.sharedModules = [
             {
               xdg.desktopEntries = listToAttrs (
-                map (entry: {
-                  name = entry.id;
-                  value = removeAttrs entry [ "id" ];
-                }) entries
+                map (
+                  entry:
+                  if validEntry entry then
+                    {
+                      name = entry.id;
+                      value = removeAttrs entry [ "id" ];
+                    }
+                  else
+                    throw "icedos.desktop.entries: every entry must declare a non-empty string 'id' (got: ${builtins.toJSON (builtins.attrNames entry)})"
+                ) entries
               );
             }
           ];
