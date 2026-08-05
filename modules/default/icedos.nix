@@ -9,9 +9,9 @@
     let
       inherit (icedosLib)
         mkBoolOption
+        mkEnumOption
         mkIntBetweenOption
         mkListOption
-        mkNumberOption
         mkStrListOption
         mkStrOption
         mkUsersOption
@@ -47,7 +47,24 @@
 
       clock = {
         date = mkBoolOption { default = clock.date; };
-        firstDayOfTheWeek = mkStrOption { default = clock.firstDayOfTheWeek; };
+
+        firstDayOfTheWeek =
+          mkEnumOption
+            {
+              path = "icedos.desktop.clock.firstDayOfTheWeek";
+              source = ./config.toml;
+              default = clock.firstDayOfTheWeek;
+            }
+            [
+              "monday"
+              "tuesday"
+              "wednesday"
+              "thursday"
+              "friday"
+              "saturday"
+              "sunday"
+            ];
+
         hourFormat24 = mkBoolOption { default = clock.hourFormat24; };
         seconds = mkBoolOption { default = clock.seconds; };
         weekday = mkBoolOption { default = clock.weekday; };
@@ -74,7 +91,13 @@
 
       windows = {
         activeHint = mkBoolOption { default = windows.activeHint; };
-        activeHintSize = mkNumberOption { default = windows.activeHintSize; };
+
+        activeHintSize = mkIntBetweenOption {
+          path = "icedos.desktop.windows.activeHintSize";
+          source = ./config.toml;
+          default = windows.activeHintSize;
+        } 0 10;
+
         maximizeButton = mkBoolOption { default = windows.maximizeButton; };
         minimizeButton = mkBoolOption { default = windows.minimizeButton; };
 
@@ -93,17 +116,32 @@
         idle = {
           disable-monitors = {
             enable = mkBoolOption { default = idle.disable-monitors.enable; };
-            seconds = mkNumberOption { default = idle.disable-monitors.seconds; };
+
+            seconds = mkIntBetweenOption {
+              path = "icedos.desktop.users.<u>.idle.disable-monitors.seconds";
+              source = ./config.toml;
+              default = idle.disable-monitors.seconds;
+            } 0 86400;
           };
 
           lock = {
             enable = mkBoolOption { default = idle.lock.enable; };
-            seconds = mkNumberOption { default = idle.lock.seconds; };
+
+            seconds = mkIntBetweenOption {
+              path = "icedos.desktop.users.<u>.idle.lock.seconds";
+              source = ./config.toml;
+              default = idle.lock.seconds;
+            } 0 86400;
           };
 
           suspend = {
             enable = mkBoolOption { default = idle.suspend.enable; };
-            seconds = mkNumberOption { default = idle.suspend.seconds; };
+
+            seconds = mkIntBetweenOption {
+              path = "icedos.desktop.users.<u>.idle.suspend.seconds";
+              source = ./config.toml;
+              default = idle.suspend.seconds;
+            } 0 86400;
           };
         };
       };
@@ -467,7 +505,10 @@
                       #  - URI in stale set: drop.
                       #  - Otherwise: untouched (user drag-add).
                       tmp=$(${pkgs.coreutils}/bin/mktemp)
-                      ${pkgs.gawk}/bin/awk -v stale="$stale_uris" '
+
+                      # Abort (without the mv below) if the rewrite fails, so a
+                      # partial/empty temp never clobbers the real bookmarks.
+                      if ! ${pkgs.gawk}/bin/awk -v stale="$stale_uris" '
                         BEGIN {
                           n = split(stale, a, "\n")
                           for (i = 1; i <= n; i++) if (a[i] != "") rm[a[i]] = 1
@@ -480,7 +521,11 @@
                             print
                           }
                         }
-                      ' ${declaredFile} "$target" > "$tmp" || true
+                      ' ${declaredFile} "$target" > "$tmp"; then
+                        ${pkgs.coreutils}/bin/rm -f "$tmp"
+                        echo "icedos: failed to rewrite GTK bookmarks; existing file left intact" >&2
+                        exit 1
+                      fi
                       $DRY_RUN_CMD ${pkgs.coreutils}/bin/mv "$tmp" "$target"
 
                       # Append declared lines whose URI isn't present in target.
