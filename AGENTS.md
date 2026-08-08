@@ -23,6 +23,16 @@ namespace that is **not** specific to one DE lives here.
 `modules/<name>/{icedos.nix,config.toml}` per module; `flake.nix` exposes them via
 `icedosLib.scanModules { path = ./modules; filename = "icedos.nix"; }`.
 
+The repo also ships a repo-root **`lib.nix`** — the desktop/DE-dependent helpers
+(accent resolution, button-layout string, per-DE session targets). The always-on
+`default` module imports it through its top-level `lib` field
+(`modules/default/icedos.nix`: `lib = import ../../lib.nix { inherit icedosLib lib; };`),
+and core merges that field into the module-facing `icedosLib` over the resolved
+closure — so this repo contributes even when pulled in as a dependency (every DE
+repo declares desktop as a **required** dependency for exactly this reason); it
+only receives core's base `icedosLib`, so no other repo's contributions are
+visible inside it — cross-repo composition happens at the module layer.
+
 ## Module shape here
 Standard IceDOS module under `options.icedos.desktop.<name>`.
 

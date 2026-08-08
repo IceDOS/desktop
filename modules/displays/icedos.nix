@@ -1,4 +1,4 @@
-{ ... }:
+{ icedosLib, ... }:
 {
   outputs.nixosModules =
     { ... }:
@@ -13,17 +13,25 @@
 
         let
           inherit (lib)
-            hasAttr
             head
             length
             mkIf
             optional
             ;
 
-          inherit (config.icedos) desktop hardware;
+          inherit (config.icedos) hardware;
 
-          gnome = hasAttr "gnome" desktop;
-          hyprland = hasAttr "hyprland" desktop;
+          gnome = icedosLib.hasModule {
+            inherit config;
+            url = "github:icedos/gnome";
+            modules = [ "default" ];
+          };
+
+          hyprland = icedosLib.hasModule {
+            inherit config;
+            url = "github:icedos/hyprland";
+            modules = [ "default" ];
+          };
 
           # Per-user state: /tmp is world-writable and shared across users, so
           # a local process could pre-create the path / symlink the file and
@@ -87,7 +95,16 @@
           home-manager.sharedModules = [
             {
               systemd.user.services.xprimary =
-                mkIf (hyprland && hasAttr "monitors" hardware && (length hardware.monitors) != 0)
+                mkIf
+                  (
+                    hyprland
+                    && icedosLib.hasModule {
+                      inherit config;
+                      url = "github:icedos/hardware";
+                      name = "monitors";
+                    }
+                    && (length hardware.monitors) != 0
+                  )
                   {
 
                     Unit = {

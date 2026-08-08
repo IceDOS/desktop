@@ -5,6 +5,14 @@
 }:
 
 {
+  # icedosLib contribution: the desktop/DE-dependent helpers (accent
+  # resolution, button-layout string, per-DE session targets) live in the
+  # repo-root `lib.nix`, imported here so core merges them into the
+  # module-facing `icedosLib` over the resolved closure (this repo is a
+  # required dep of every DE repo, so this `default` module — and thus the
+  # contribution — is always loaded).
+  lib = import ../../lib.nix { inherit icedosLib lib; };
+
   options.icedos.desktop =
     let
       inherit (icedosLib)
@@ -167,7 +175,6 @@
           inherit (icedosLib.users) genDefaults;
 
           inherit (lib)
-            hasAttr
             mapAttrs
             mkDefault
             mkForce
@@ -178,6 +185,12 @@
             ;
 
           inherit (config.icedos) desktop users;
+
+          hasGnome = icedosLib.hasModule {
+            inherit config;
+            url = "github:icedos/gnome";
+            modules = [ "default" ];
+          };
 
           inherit (desktop)
             autologinUser
@@ -358,7 +371,7 @@
                 # file-picker sidebar. No equivalent runs on COSMIC/Hyprland,
                 # so reconcile a declared set here while leaving any other
                 # bookmarks (e.g. drag-to-sidebar in Nautilus) untouched.
-                (mkIf (!hasAttr "gnome" desktop) (
+                (mkIf (!hasGnome) (
                   let
                     inherit (config.xdg) userDirs;
                     inherit (desktop) bookmarks;
