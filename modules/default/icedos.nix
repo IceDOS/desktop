@@ -207,8 +207,8 @@
           accentHex = hex;
 
           audioPlayer = "io.bassi.Amberol.desktop";
-          browser = defaultBrowser;
-          editor = defaultEditor;
+          browser = mkIf (defaultBrowser != "") defaultBrowser;
+          editor = mkIf (defaultEditor != "") defaultEditor;
 
           gtkCss = ''
             @define-color accent_bg_color ${accentHex};
