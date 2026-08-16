@@ -5,12 +5,8 @@
 }:
 
 {
-  # icedosLib contribution: the desktop/DE-dependent helpers (accent
-  # resolution, button-layout string, per-DE session targets) live in the
-  # repo-root `lib.nix`, imported here so core merges them into the
-  # module-facing `icedosLib` over the resolved closure (this repo is a
-  # required dep of every DE repo, so this `default` module — and thus the
-  # contribution — is always loaded).
+  # icedosLib contribution: the DE-dependent helpers from repo-root lib.nix,
+  # merged into the module-facing icedosLib (this module is always loaded).
   lib = import ../../lib.nix { inherit icedosLib lib; };
 
   options.icedos.desktop =
@@ -201,23 +197,10 @@
             ;
 
           resolved = generateAccent config;
-          inherit (resolved) hex stylixOn;
-
-          stylixEnabled = stylixOn;
-          accentHex = hex;
 
           audioPlayer = "io.bassi.Amberol.desktop";
           browser = mkIf (defaultBrowser != "") defaultBrowser;
           editor = mkIf (defaultEditor != "") defaultEditor;
-
-          gtkCss = ''
-            @define-color accent_bg_color ${accentHex};
-            @define-color accent_color @accent_bg_color;
-
-            :root {
-              --accent-bg-color: @accent_bg_color;
-            }
-          '';
 
           imageViewer = "org.gnome.Loupe.desktop";
           videoPlayer = "io.github.celluloid_player.Celluloid.desktop";
@@ -238,9 +221,8 @@
               loupe # Image viewer
               onlyoffice-desktopeditors # Office tools
 
-              # Qt5 + Qt6 Wayland decoration plugins that read
-              # `org/gnome/desktop/wm/preferences/button-layout` from dconf,
-              # so qt5ct/qt6ct/Telegram/etc. honor `icedos.desktop.titlebar.*`.
+              # Qt Wayland decoration plugins reading the GNOME button-layout
+              # dconf key, so Qt apps honor `icedos.desktop.titlebar.*`.
               qadwaitadecorations
               qadwaitadecorations-qt6
             ];
@@ -248,15 +230,9 @@
             sessionVariables = {
               NIXOS_OZONE_WL = 1;
               QT_QPA_PLATFORM = "wayland;xcb";
-              QT_QPA_PLATFORMTHEME = mkIf (
-                !stylixEnabled && !config.services.desktopManager.plasma6.enable
-              ) "qt5ct";
 
-              # Forces Qt's Wayland CSD to the adwaita plugin (provided by the
-              # qadwaitadecorations packages above), which reads the GNOME
-              # button-layout dconf key. Without this Qt5 falls back to the
-              # bradient plugin (3 buttons hardcoded) and Qt6 falls back to
-              # libdecor's default plugin.
+              # Force Qt Wayland CSD to the adwaita plugin (reads the dconf
+              # key); without it Qt5 uses bradient, Qt6 libdecor's default.
               QT_WAYLAND_DECORATION = "adwaita";
             };
           };
@@ -271,12 +247,8 @@
 
           services.displayManager.autoLogin.user = mkIf (autologinUser != "") autologinUser;
 
-          # Reload (don't restart) polkitd on switch. A restart drops every
-          # authentication agent's registration (cosmic-osd, sysauth, polkit-kde,
-          # gnome-shell), breaking pkexec until the session restarts. polkit 127
-          # is Type=notify-reload, so SIGHUP re-reads rules without dropping clients.
-          # reloadTriggers is cleared because reloadIfChanged makes the upstream
-          # split between reload-/restart-triggers redundant (both end up reloading).
+          # Reload (not restart) polkitd: a restart drops agent registrations,
+          # breaking pkexec. SIGHUP re-reads rules without dropping clients.
           systemd.services.polkit = {
             restartIfChanged = false;
             reloadIfChanged = true;
@@ -329,272 +301,212 @@
             };
           };
 
-          home-manager.users =
-            let
-              inherit (pkgs) adw-gtk3 bibata-cursors tela-icon-theme;
-              hasCosmicGtkTheming = desktop.cosmic.appearance.gtkTheming or false;
-            in
-            mapAttrs (
-              user: _:
-              { config, lib, ... }:
-              mkMerge [
+          home-manager.users = mapAttrs (
+            user: _:
+            { config, lib, ... }:
+            mkMerge [
+              {
+                home.pointerCursor.enable = true;
+
+                # Adopt the 26.05+ default to silence the legacy warning.
+                gtk.gtk4.theme = mkDefault null;
+
+                dconf.settings = {
+                  "org/gnome/desktop/interface".color-scheme = mkDefault "prefer-dark";
+
+                  "org/gnome/desktop/wm/preferences".button-layout =
+                    icedosLib.desktop.mkButtonLayoutString desktop.windows;
+
+                  "org/gtk/settings/file-chooser" = {
+                    sort-directories-first = true;
+                    date-format = "with-time";
+                    show-type-column = false;
+                    show-hidden = true;
+                  };
+                };
+
+                xdg.userDirs = {
+                  enable = true;
+                  createDirectories = true;
+                  setSessionVariables = true;
+                };
+              }
+
+              # GNOME seeds GTK bookmarks itself; COSMIC/Hyprland don't, so
+              # reconcile a declared set while leaving user bookmarks alone.
+              (mkIf (!hasGnome) (
+                let
+                  inherit (config.xdg) userDirs;
+                  inherit (desktop) bookmarks;
+
+                  inherit (lib)
+                    concatMapStringsSep
+                    concatStringsSep
+                    elem
+                    filter
+                    hasInfix
+                    hm
+                    optional
+                    optionalString
+                    unique
+                    ;
+
+                  defaultEntries =
+                    optional bookmarks.documents {
+                      uri = "file://${userDirs.documents}";
+                      label = "Documents";
+                    }
+                    ++ optional bookmarks.downloads {
+                      uri = "file://${userDirs.download}";
+                      label = "Downloads";
+                    }
+                    ++ optional bookmarks.music {
+                      uri = "file://${userDirs.music}";
+                      label = "Music";
+                    }
+                    ++ optional bookmarks.pictures {
+                      uri = "file://${userDirs.pictures}";
+                      label = "Pictures";
+                    }
+                    ++ optional bookmarks.videos {
+                      uri = "file://${userDirs.videos}";
+                      label = "Videos";
+                    }
+                    ++ optional bookmarks.public {
+                      uri = "file://${userDirs.publicShare}";
+                      label = "Public";
+                    }
+                    ++ optional bookmarks.templates {
+                      uri = "file://${userDirs.templates}";
+                      label = "Templates";
+                    };
+
+                  # Each extra: bare path or { path; name ? ""; }. URI keeps an
+                  # existing scheme, else gets file://; label = path's last segment.
+                  normalizeExtra =
+                    e:
+                    if builtins.isString e then
+                      {
+                        path = e;
+                        name = "";
+                      }
+                    else
+                      e;
+
+                  extrasEntries = map (
+                    e:
+                    let
+                      n = normalizeExtra e;
+                      uri = if hasInfix "://" n.path then n.path else "file://${n.path}";
+                      label = if n.name != "" then n.name else baseNameOf n.path;
+                    in
+                    {
+                      inherit uri label;
+                    }
+                  ) bookmarks.extras;
+
+                  # Extras override defaults at the same URI (label wins); two
+                  # extras with one URI is a config bug.
+                  extrasUris = map (e: e.uri) extrasEntries;
+                  duplicateUris = unique (
+                    filter (uri: builtins.length (filter (x: x == uri) extrasUris) > 1) extrasUris
+                  );
+
+                  declaredEntries = filter (e: !(elem e.uri extrasUris)) defaultEntries ++ extrasEntries;
+
+                  declaredLines = map (e: "${e.uri} ${e.label}") declaredEntries;
+
+                  declaredFile = pkgs.writeText "icedos-gtk-bookmarks-declared" (
+                    concatStringsSep "\n" declaredLines + optionalString (declaredLines != [ ]) "\n"
+                  );
+
+                  # File pickers auto-seed XDG dirs; treat them as removable so
+                  # toggling off drops them even if never tracked in our state.
+                  xdgUriFile = pkgs.writeText "icedos-gtk-bookmarks-xdg-uris" (
+                    concatMapStringsSep "\n" (p: "file://${p}") [
+                      userDirs.documents
+                      userDirs.download
+                      userDirs.music
+                      userDirs.pictures
+                      userDirs.videos
+                      userDirs.publicShare
+                      userDirs.templates
+                    ]
+                    + "\n"
+                  );
+                in
                 {
-                  home.pointerCursor.enable = true;
+                  assertions = [
+                    {
+                      assertion = duplicateUris == [ ];
+                      message = ''
+                        icedos.desktop.bookmarks.extras: duplicate URIs: ${concatStringsSep ", " duplicateUris}. Each path can only appear once in extras (extras override matching defaults automatically).
+                      '';
+                    }
+                  ];
 
-                  # Adopt the 26.05+ default to silence the legacy warning
-                  # regardless of stylix state; specific blocks below can override.
-                  gtk.gtk4.theme = mkDefault null;
+                  home.activation.seedGtkBookmarks = hm.dag.entryAfter [ "writeBoundary" ] ''
+                    target="$HOME/.config/gtk-3.0/bookmarks"
+                    state_dir="$HOME/.local/state/icedos"
+                    state="$state_dir/gtk-bookmarks.declared"
 
-                  dconf.settings = {
-                    "org/gnome/desktop/interface".color-scheme = mkDefault "prefer-dark";
+                    $DRY_RUN_CMD mkdir -p "$state_dir" "$(dirname "$target")"
+                    $DRY_RUN_CMD ${pkgs.coreutils}/bin/touch "$target"
 
-                    "org/gnome/desktop/wm/preferences".button-layout =
-                      icedosLib.desktop.mkButtonLayoutString desktop.windows;
+                    # URI = first whitespace-separated token of a bookmark line.
+                    uris() { ${pkgs.gawk}/bin/awk '{print $1}' "$1" | ${pkgs.coreutils}/bin/sort -u; }
 
-                    "org/gtk/settings/file-chooser" = {
-                      sort-directories-first = true;
-                      date-format = "with-time";
-                      show-type-column = false;
-                      show-hidden = true;
-                    };
-                  };
+                    # Overwritable/strippable URIs = XDG dirs ∪ declared; toggling
+                    # off drops them even when Nautilus seeded them first.
+                    removable=$(${pkgs.coreutils}/bin/mktemp)
+                    {
+                      uris ${xdgUriFile}
+                      if [ -f "$state" ]; then uris "$state"; fi
+                    } | ${pkgs.coreutils}/bin/sort -u > "$removable"
+                    stale_uris=$(${pkgs.coreutils}/bin/comm -23 "$removable" <(uris ${declaredFile}))
+                    ${pkgs.coreutils}/bin/rm -f "$removable"
 
-                  xdg.userDirs = {
-                    enable = true;
-                    createDirectories = true;
-                    setSessionVariables = true;
-                  };
+                    # Single pass: keep declared lines iff unchanged, drop stale
+                    # URIs, leave everything else (user drag-adds) untouched.
+                    tmp=$(${pkgs.coreutils}/bin/mktemp)
+
+                    # Abort (without the mv below) if the rewrite fails, so a
+                    # partial/empty temp never clobbers the real bookmarks.
+                    if ! ${pkgs.gawk}/bin/awk -v stale="$stale_uris" '
+                      BEGIN {
+                        n = split(stale, a, "\n")
+                        for (i = 1; i <= n; i++) if (a[i] != "") rm[a[i]] = 1
+                      }
+                      NR == FNR { decl[$1] = $0; next }
+                      {
+                        if ($1 in decl) {
+                          if ($0 == decl[$1]) print
+                        } else if (!($1 in rm)) {
+                          print
+                        }
+                      }
+                    ' ${declaredFile} "$target" > "$tmp"; then
+                      ${pkgs.coreutils}/bin/rm -f "$tmp"
+                      echo "icedos: failed to rewrite GTK bookmarks; existing file left intact" >&2
+                      exit 1
+                    fi
+                    $DRY_RUN_CMD ${pkgs.coreutils}/bin/mv "$tmp" "$target"
+
+                    # Append declared lines whose URI isn't present in target.
+                    to_add_uris=$(${pkgs.coreutils}/bin/comm -23 <(uris ${declaredFile}) <(uris "$target"))
+                    if [ -n "$to_add_uris" ]; then
+                      printf '%s\n' "$to_add_uris" \
+                        | ${pkgs.gawk}/bin/awk 'NR==FNR { want[$0]=1; next } ($1 in want) && !seen[$1]++' - ${declaredFile} \
+                        | $DRY_RUN_CMD ${pkgs.coreutils}/bin/tee -a "$target" > /dev/null
+                    fi
+
+                    $DRY_RUN_CMD install -m 0644 ${declaredFile} "$state"
+                  '';
                 }
+              ))
 
-                # gnome-session populates GTK bookmarks at first login on
-                # GNOME, so the XDG dirs always show up in the nautilus / GTK
-                # file-picker sidebar. No equivalent runs on COSMIC/Hyprland,
-                # so reconcile a declared set here while leaving any other
-                # bookmarks (e.g. drag-to-sidebar in Nautilus) untouched.
-                (mkIf (!hasGnome) (
-                  let
-                    inherit (config.xdg) userDirs;
-                    inherit (desktop) bookmarks;
-
-                    inherit (lib)
-                      concatMapStringsSep
-                      concatStringsSep
-                      elem
-                      filter
-                      hasInfix
-                      hm
-                      optional
-                      optionalString
-                      unique
-                      ;
-
-                    defaultEntries =
-                      optional bookmarks.documents {
-                        uri = "file://${userDirs.documents}";
-                        label = "Documents";
-                      }
-                      ++ optional bookmarks.downloads {
-                        uri = "file://${userDirs.download}";
-                        label = "Downloads";
-                      }
-                      ++ optional bookmarks.music {
-                        uri = "file://${userDirs.music}";
-                        label = "Music";
-                      }
-                      ++ optional bookmarks.pictures {
-                        uri = "file://${userDirs.pictures}";
-                        label = "Pictures";
-                      }
-                      ++ optional bookmarks.videos {
-                        uri = "file://${userDirs.videos}";
-                        label = "Videos";
-                      }
-                      ++ optional bookmarks.public {
-                        uri = "file://${userDirs.publicShare}";
-                        label = "Public";
-                      }
-                      ++ optional bookmarks.templates {
-                        uri = "file://${userDirs.templates}";
-                        label = "Templates";
-                      };
-
-                    # Each extra is either a bare path string or a
-                    # { path; name ? ""; } attrset. URI is the path verbatim if it
-                    # already contains a scheme, otherwise prefixed with file://.
-                    # Label falls back to the path's last segment when name is empty
-                    # or the entry was a bare string.
-                    normalizeExtra =
-                      e:
-                      if builtins.isString e then
-                        {
-                          path = e;
-                          name = "";
-                        }
-                      else
-                        e;
-
-                    extrasEntries = map (
-                      e:
-                      let
-                        n = normalizeExtra e;
-                        uri = if hasInfix "://" n.path then n.path else "file://${n.path}";
-                        label = if n.name != "" then n.name else baseNameOf n.path;
-                      in
-                      {
-                        inherit uri label;
-                      }
-                    ) bookmarks.extras;
-
-                    # Extras override defaults at the same URI: drop the default
-                    # entry whose URI is also declared as an extra so the extra's
-                    # label wins. Two extras at the same URI is treated as a config bug.
-                    extrasUris = map (e: e.uri) extrasEntries;
-                    duplicateUris = unique (
-                      filter (uri: builtins.length (filter (x: x == uri) extrasUris) > 1) extrasUris
-                    );
-
-                    declaredEntries = filter (e: !(elem e.uri extrasUris)) defaultEntries ++ extrasEntries;
-
-                    declaredLines = map (e: "${e.uri} ${e.label}") declaredEntries;
-
-                    declaredFile = pkgs.writeText "icedos-gtk-bookmarks-declared" (
-                      concatStringsSep "\n" declaredLines + optionalString (declaredLines != [ ]) "\n"
-                    );
-
-                    # Nautilus / GTK file pickers auto-seed all XDG dirs on first
-                    # sidebar interaction. Treat them as always-removable so toggling
-                    # one off in icedos config drops it from the bookmarks file even
-                    # when the line was added by another app and never tracked in
-                    # our state file.
-                    xdgUriFile = pkgs.writeText "icedos-gtk-bookmarks-xdg-uris" (
-                      concatMapStringsSep "\n" (p: "file://${p}") [
-                        userDirs.documents
-                        userDirs.download
-                        userDirs.music
-                        userDirs.pictures
-                        userDirs.videos
-                        userDirs.publicShare
-                        userDirs.templates
-                      ]
-                      + "\n"
-                    );
-                  in
-                  {
-                    assertions = [
-                      {
-                        assertion = duplicateUris == [ ];
-                        message = ''
-                          icedos.desktop.bookmarks.extras: duplicate URIs: ${concatStringsSep ", " duplicateUris}. Each path can only appear once in extras (extras override matching defaults automatically).
-                        '';
-                      }
-                    ];
-
-                    home.activation.seedGtkBookmarks = hm.dag.entryAfter [ "writeBoundary" ] ''
-                      target="$HOME/.config/gtk-3.0/bookmarks"
-                      state_dir="$HOME/.local/state/icedos"
-                      state="$state_dir/gtk-bookmarks.declared"
-
-                      $DRY_RUN_CMD mkdir -p "$state_dir" "$(dirname "$target")"
-                      $DRY_RUN_CMD ${pkgs.coreutils}/bin/touch "$target"
-
-                      # URI = first whitespace-separated token of a bookmark line.
-                      uris() { ${pkgs.gawk}/bin/awk '{print $1}' "$1" | ${pkgs.coreutils}/bin/sort -u; }
-
-                      # URIs we may overwrite or strip = standard XDG dirs ∪
-                      # previously-declared. Toggling off (or removing an extra) drops
-                      # the URI even if Nautilus seeded it before we managed it.
-                      removable=$(${pkgs.coreutils}/bin/mktemp)
-                      {
-                        uris ${xdgUriFile}
-                        if [ -f "$state" ]; then uris "$state"; fi
-                      } | ${pkgs.coreutils}/bin/sort -u > "$removable"
-                      stale_uris=$(${pkgs.coreutils}/bin/comm -23 "$removable" <(uris ${declaredFile}))
-                      ${pkgs.coreutils}/bin/rm -f "$removable"
-
-                      # Single-pass filter on $target:
-                      #  - URI matches a declared line: keep iff full line equals
-                      #    declared's version (label/path-form changes get replaced
-                      #    by the to_add step below).
-                      #  - URI in stale set: drop.
-                      #  - Otherwise: untouched (user drag-add).
-                      tmp=$(${pkgs.coreutils}/bin/mktemp)
-
-                      # Abort (without the mv below) if the rewrite fails, so a
-                      # partial/empty temp never clobbers the real bookmarks.
-                      if ! ${pkgs.gawk}/bin/awk -v stale="$stale_uris" '
-                        BEGIN {
-                          n = split(stale, a, "\n")
-                          for (i = 1; i <= n; i++) if (a[i] != "") rm[a[i]] = 1
-                        }
-                        NR == FNR { decl[$1] = $0; next }
-                        {
-                          if ($1 in decl) {
-                            if ($0 == decl[$1]) print
-                          } else if (!($1 in rm)) {
-                            print
-                          }
-                        }
-                      ' ${declaredFile} "$target" > "$tmp"; then
-                        ${pkgs.coreutils}/bin/rm -f "$tmp"
-                        echo "icedos: failed to rewrite GTK bookmarks; existing file left intact" >&2
-                        exit 1
-                      fi
-                      $DRY_RUN_CMD ${pkgs.coreutils}/bin/mv "$tmp" "$target"
-
-                      # Append declared lines whose URI isn't present in target.
-                      to_add_uris=$(${pkgs.coreutils}/bin/comm -23 <(uris ${declaredFile}) <(uris "$target"))
-                      if [ -n "$to_add_uris" ]; then
-                        printf '%s\n' "$to_add_uris" \
-                          | ${pkgs.gawk}/bin/awk 'NR==FNR { want[$0]=1; next } ($1 in want) && !seen[$1]++' - ${declaredFile} \
-                          | $DRY_RUN_CMD ${pkgs.coreutils}/bin/tee -a "$target" > /dev/null
-                      fi
-
-                      $DRY_RUN_CMD install -m 0644 ${declaredFile} "$state"
-                    '';
-                  }
-                ))
-
-                (mkIf (!stylixEnabled) {
-                  gtk = {
-                    enable = true;
-
-                    theme = {
-                      name = "adw-gtk3-dark";
-                      package = adw-gtk3;
-                    };
-
-                    cursorTheme = {
-                      name = "Bibata-Modern-Classic";
-                      package = bibata-cursors;
-                    };
-
-                    iconTheme = {
-                      name = "Tela-black-dark";
-                      package = tela-icon-theme;
-                    };
-
-                    gtk3.extraCss = gtkCss;
-                    gtk4.theme = null; # Fallback for system versions lower than 26.05
-                  };
-
-                  home = {
-                    pointerCursor = {
-                      enable = true;
-                      gtk.enable = true;
-                      x11.enable = true;
-                      package = bibata-cursors;
-                      name = "Bibata-Modern-Classic";
-                      size = 24;
-                    };
-
-                    file.".config/gtk-4.0/gtk.css" = mkIf (!hasCosmicGtkTheming) {
-                      text = gtkCss;
-                    };
-                  };
-                })
-
-              ]
-            ) users;
+            ]
+          ) users;
         }
       )
     ];
@@ -605,7 +517,7 @@
     dependencies = [
       {
         modules = [
-          "adwaita-qt"
+          "qt-qtct"
           "entries"
           "session"
           "startup"

@@ -1,16 +1,5 @@
-# Repo-root `lib.nix`: the desktop/DE-dependent helpers that used to live in
-# core (libadwaita accent resolution, the GNOME button-layout string, per-DE
-# session targets). The always-on `default` module imports this via its
-# top-level `lib` field (`modules/default/icedos.nix`:
-# `lib = import ../../lib.nix { inherit icedosLib lib; };`), and core merges
-# that field into the module-facing `icedosLib` over the resolved closure — so
-# this repo contributes even when pulled in as a dependency (every DE repo
-# declares desktop as a **required** dependency for exactly this reason).
-#
-# A contribution sees only the BASE `icedosLib` (core helpers like
-# `hasModule`), never the merged lib: the merge's construction depends on
-# importing this very file, so handing it the merged value would be an
-# infinite recursion. Cross-repo composition happens at the module layer.
+# Desktop/DE-dependent helpers (accent resolution, button-layout, session
+# targets), contributed into the module-facing icedosLib by the default module.
 {
   icedosLib,
   lib,
@@ -35,9 +24,8 @@ let
   inherit (icedosLib) hasModule;
 in
 rec {
-  # Authoritative libadwaita named-accent → hex map. Mirrors GNOME 47+
-  # `org/gnome/desktop/interface.accent-color` enum and libadwaita's
-  # `_palette.scss`. Bare hex (no `#`) so callers can pick the form.
+  # libadwaita named-accent → hex map (mirrors GNOME 47+ accent-color enum);
+  # bare hex (no `#`) so callers can pick the form.
   libadwaitaAccentHex = {
     blue = "3584e4";
     green = "3a944a";
@@ -50,15 +38,8 @@ rec {
     yellow = "c88800";
   };
 
-  # Single source of truth for `icedos.desktop.accentColor` resolution.
-  # Accepts a libadwaita name, a base16 slot (`base08`..`base0F`, only
-  # meaningful when stylix is on), or a hex (`RRGGBB` / `#RRGGBB`).
-  # Empty → "purple". Returns:
-  #   { hex; hexNoHash; name; slot; warning; gnomeOn; stylixOn; }
-  # `warning` is non-null when GNOME is on but the input is not a libadwaita
-  # named accent — `org/gnome/desktop/interface.accent-color` is a string
-  # enum, so a slot/hex input causes the GNOME shell to render a fallback
-  # name while libadwaita apps render the user's hex.
+  # Single source of truth for `icedos.desktop.accentColor`: libadwaita name,
+  # base16 slot, or hex; empty → "purple". Returns { hex; hexNoHash; name; slot; warning; gnomeOn; }.
   generateAccent =
     config:
     let
@@ -71,14 +52,10 @@ rec {
         modules = [ "default" ];
       };
 
-      stylixOn = config.stylix.enable or false;
-
       namedAccents = attrNames libadwaitaAccentHex;
 
-      # base16 slot inverse — only used when input is a slot and we still
-      # need a libadwaita name (e.g. for the GNOME dconf write under stylix).
-      # Mirrors the bundled `adwaita` handler in
-      # desktop/modules/stylix/lib.nix.
+      # Slot → libadwaita name (for the GNOME dconf write); mirrors the
+      # `adwaita` handler in desktop/modules/stylix/lib.nix.
       defaultSlotToName = {
         base08 = "red";
         base09 = "orange";
@@ -96,9 +73,8 @@ rec {
 
       input = if raw == "" then "purple" else raw;
 
-      # Normalise a base16 slot to the canonical uppercase nibble (`base0A`,
-      # not `base0a`): `config.lib.stylix.colors`, `defaultSlotToName` and the
-      # stylix `accentNameFromSlot` maps are all keyed with the uppercase form.
+      # Normalise slots to uppercase (`base0A`): stylix colors and the
+      # accentNameFromSlot maps are keyed with the uppercase form.
       slotInput = if isSlot input then "base0${toUpper (substring 5 1 input)}" else null;
 
       name =
@@ -112,7 +88,7 @@ rec {
       hexNoHash =
         if isHex input then
           removePrefix "#" input
-        else if isSlot input && stylixOn then
+        else if isSlot input then
           config.lib.stylix.colors.${slotInput}
         else
           libadwaitaAccentHex.${name};
@@ -135,17 +111,12 @@ rec {
         slot
         warning
         gnomeOn
-        stylixOn
         ;
     };
 
   desktop = {
-    # Build a GNOME `org.gnome.desktop.wm.preferences/button-layout` string
-    # from per-button visibility flags. Fed to GNOME directly and to Zed's
-    # `title_bar.button_layout` (which parses the same format via
-    # `WindowButtonLayout::parse` in `crates/gpui/src/platform.rs`).
-    # Close is always present (no opt-out); minimize/maximize follow their
-    # flags.
+    # GNOME button-layout string from per-button flags (also parsed by Zed's
+    # title_bar.button_layout); close is always present.
     mkButtonLayoutString =
       {
         minimizeButton,
@@ -161,19 +132,14 @@ rec {
       in
       "appmenu:${buttons}";
 
-    # Returns the active accent color as a 6-char hex string (no `#`),
-    # used by per-WM modules to colour focused-window borders /
-    # active-hint indicators. Wraps `generateAccent` so all consumers
-    # share the same name/slot/hex resolution rules.
+    # Active accent as 6-char hex (no `#`) for per-WM modules (focused-window
+    # borders / active-hint indicators); wraps `generateAccent`.
     accentHex = config: (generateAccent config).hexNoHash;
   };
 
   systemd = {
-    # Returns the *-session.target names for whichever DE repos are present on
-    # this host, via `hasModule` on the full NixOS `config`. Use for
-    # systemd.user.services' `Unit.After` (after prepending
-    # `graphical-session.target`) and `Install.WantedBy`. Adding a new DE
-    # means appending one line here, not editing every consumer.
+    # *-session.target names for present DE repos (via `hasModule`), for
+    # systemd.user.services' Unit.After / Install.WantedBy.
     desktopSessionTargets =
       config:
       let

@@ -33,14 +33,8 @@
             modules = [ "default" ];
           };
 
-          # Per-user state: /tmp is world-writable and shared across users, so
-          # a local process could pre-create the path / symlink the file and
-          # the xprimary service's `echo >` would clobber it (and two logged-in
-          # users would fight over the same file). XDG_RUNTIME_DIR is a 0700
-          # per-user tmpfs; fall back to the user cache when unset. The `\$`
-          # escape keeps the shell parameter expansion literal so both the
-          # toolset command and the systemd service expand the same path at
-          # runtime.
+          # /tmp is world-writable (pre-create/symlink clobber risk); use the
+          # 0700 XDG_RUNTIME_DIR, else the user cache. `\$` keeps it literal.
           tempConfigPath = "\${XDG_RUNTIME_DIR:-$HOME/.cache}/icedos";
           primaryDisplayPath = "${tempConfigPath}/primary-display";
         in
@@ -146,9 +140,8 @@
                             CURRENT_PRIMARY_DISPLAY="$PRIMARY_DISPLAY"
                             [ -f "$PRIMARY_DISPLAY_PATH" ] && CURRENT_PRIMARY_DISPLAY=$(${coreutils}/bin/cat "$PRIMARY_DISPLAY_PATH")
 
-                            # The state file is user-writable, so the name is
-                            # untrusted — guard it before it can reach xrandr
-                            # and keep the last good primary on mismatch.
+                            # State file is user-writable (untrusted): guard the
+                            # name before xrandr, keep the last good primary.
                             [[ "$CURRENT_PRIMARY_DISPLAY" =~ ^[A-Za-z0-9.-]+$ ]] || {
                               ${echo} "xprimary: ignoring invalid monitor name '$CURRENT_PRIMARY_DISPLAY'" >&2
                               CURRENT_PRIMARY_DISPLAY="$PRIMARY_DISPLAY"

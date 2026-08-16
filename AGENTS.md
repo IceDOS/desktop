@@ -42,7 +42,7 @@ checkout (`path:/abs/path/to/desktop`), then `icedos rebuild --build` (no activa
 
 ## Notable modules / gotchas
 - `gdm` (display manager/autologin), `stylix` (system theming + accent color),
-  `displays`, `clear-xdg-portals`, `adwaita-qt`, `cosmic-greeter`, `entries`
+  `displays`, `clear-xdg-portals`, `qt-qtct`, `cosmic-greeter`, `entries`
   (`icedos.desktop.entries` → desktop launchers), `session`, `startup`, `plm`.
 - **stylix** carries several IceDOS-specific quirks (Qt target disabled under Plasma6,
   KDE selection-fg patch, GDM/nixos-icons target disabled to avoid rebuilds). Check the

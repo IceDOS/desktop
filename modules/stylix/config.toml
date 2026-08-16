@@ -1,5 +1,4 @@
 [icedos.desktop.stylix]
-enable = false
 autoEnable = true
 polarity = "dark"
 base16Scheme = ""
@@ -36,12 +35,6 @@ name = "Noto Color Emoji"
 [icedos.desktop.stylix.fonts.sizes]
 applications = 11
 
-# Per-target overrides for stylix theming. Each key matches a stylix target
-# (e.g. zed, alacritty, gtk, kitty, tmux, ...). `enable = false` disables that
-# one target even when the global `autoEnable` is true; `enable = true` does
-# the inverse. Leave empty to inherit `autoEnable` everywhere.
-#
-# Example user override (in your config.toml):
-#   [icedos.desktop.stylix.targets.zed]
-#   enable = false
+# Per-target stylix overrides (e.g. [icedos.desktop.stylix.targets.zed]
+# enable = false): overrides `autoEnable` per target; empty inherits it.
 [icedos.desktop.stylix.targets]

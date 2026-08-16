@@ -23,7 +23,6 @@
         base16Scheme
         cursorTheme
         disabledTargets
-        enable
         fonts
         iconTheme
         image
@@ -31,7 +30,6 @@
         ;
     in
     {
-      enable = mkBoolOption { default = enable; };
       autoEnable = mkBoolOption { default = autoEnable; };
       base16Scheme = mkStrOption { default = base16Scheme; };
       image = mkStrOption { default = image; };
@@ -132,10 +130,8 @@
 
           stylixLib = import ./lib.nix { inherit lib pkgs; };
 
-          # Untyped attrs options replace defaults wholesale on user override,
-          # so re-merge module TOML defaults with the user's partial value to
-          # keep `cfg.iconTheme.enable` etc. resolvable when the user only sets
-          # a subset of keys.
+          # Untyped attrs options replace defaults wholesale; re-merge TOML
+          # defaults so a partial user override keeps `cfg.iconTheme.enable` resolvable.
           tomlDefaults = (importTOML ./config.toml).icedos.desktop.stylix;
           rawCfg = config.icedos.desktop.stylix;
 
@@ -174,26 +170,8 @@
 
           resolved = icedosLib.generateAccent config;
 
-          # Stylix targets hardcode `base0D` (the base16 "function name" slot)
-          # for every accent surface — vscode button bg, zed link colors,
-          # kvantum highlight, gtk treeview selection, etc. When the user
-          # picks an accent that doesn't happen to live on base0D (slot
-          # mismatch, named accent, raw hex) the palette's blue still wins on
-          # those surfaces and the override is invisible. Patch the resolved
-          # YAML once at the source: rewrite the `base0D` line to the
-          # resolved accent hex. All stylix targets re-derive their values
-          # from `config.lib.stylix.colors.base0D` so this propagates
-          # everywhere without per-target post-processing.
-          #
-          # Stringify the derivation: `stylix.base16Scheme` accepts either an
-          # attrset (parsed scheme) or a path. A bare derivation is an
-          # attrset in Nix, so passing the derivation directly trips
-          # base16.nix's `isAttrs` branch and parsing fails. Interpolating
-          # forces path-string treatment.
-          #
-          # The sed replacement splices the accent verbatim; assert the 6-hex
-          # contract so a non-hex accent fails eval loudly instead of silently
-          # emitting a stale/malformed palette.
+          # Stylix hardcodes base0D for every accent surface; rewrite that line to
+          # the resolved accent. Stringify: bare derivations are attrsets.
           accentPatchedBase16Scheme =
             assert (builtins.match "[0-9a-fA-F]{6}" resolved.hexNoHash != null);
             "${pkgs.runCommandLocal "icedos-base16-accent.yaml" { } ''
@@ -204,12 +182,8 @@
                 $out
             ''}";
 
-          # Slot-input under stylix gets the theme-specific accent name (e.g.
-          # catppuccin's `mauve`/`flamingo`). Name and hex inputs already
-          # produce a libadwaita name in `resolved.name` and don't need
-          # theme-aware remapping — the theme handlers' icon / cursor
-          # packages still take that name and the package's name-resolver
-          # decides whether to honour or fallback.
+          # Slot inputs map to the theme's accent name (e.g. catppuccin
+          # `mauve`); name/hex inputs already resolve via `resolved.name`.
           accentName =
             if resolved.slot != null then
               theme.accentNameFromSlot.${resolved.slot} or stylixLib.defaultAccentNames.${resolved.slot}
@@ -253,26 +227,8 @@
             else
               "Papirus-Light";
 
-          # GTK4's strict symbolic-SVG renderer ignores <g> and rejects invalid
-          # attrs, so ~325 of Tela's symbolic icons (path wrapped in
-          # <g transform> -> drawn off the 16x16 viewBox; or stray stop-color /
-          # stroke attrs -> conversion fails) render blank in libadwaita apps
-          # (LACT etc.) under stylix, which forces Tela as the GTK icon theme.
-          # (KDE/Qt have a tolerant icon engine, so Tela works there; without
-          # stylix the GTK theme is breeze/Adwaita, already GTK-clean.)
-          #
-          # Build a GTK-only variant ("<name>-gtk") that keeps Tela's colour
-          # icons, and repairs the symbolic ones in place with one svgo folder
-          # pass: strip the bad attrs, flatten transforms into path coords ->
-          # keeps the Tela glyph, renders in GTK4. ~1378/1534 repair cleanly
-          # (incl. every window/dialog/+- control + sidebar glyph); the ~156
-          # svgo can't flatten (rect/matrix combos) stay blank, but they're
-          # obscure status/app icons absent from GTK app chrome. Point ONLY the
-          # HM gtk.iconTheme plane at it (below); Plasma (kdeglobals) and COSMIC
-          # (toolkit RON) keep full Tela, and the distinct -gtk name stops the
-          # variant shadowing Tela for Qt. No nixpkgs derivation is patched, so
-          # cache hits are preserved (same rationale as the gtksourceview /
-          # nixos-icons disables above).
+          # Tela's symbolic icons break GTK4's strict SVG renderer; build a -gtk
+          # variant with svgo-repaired symbols, only for the HM gtk.iconTheme plane.
           gtkIconsPackage =
             let
               svgoFlatten = pkgs.writeText "svgo.config.cjs" ''
@@ -300,17 +256,15 @@
                 [ -e "$src" ] || continue
                 dst="$out/share/icons/$variant-gtk"
                 mkdir -p "$dst"
-                # Colour icons + index.theme: symlink (unchanged Tela). Drop the
-                # symbolic/ symlink + stale cache; symbolic is rebuilt below.
+                # Symlink unchanged colour icons; symbolic is rebuilt below.
                 for f in "$src"/*; do
                   case "$(basename "$f")" in
                     symbolic | icon-theme.cache) ;;
                     *) ln -s "$f" "$dst/" ;;
                   esac
                 done
-                # Symbolic: real (deref) copy so it's writable, strip the
-                # GTK4-invalid attrs, then flatten transforms into path coords
-                # with one svgo folder pass.
+                # Deref-copy symbolic so it's writable, strip GTK4-invalid
+                # attrs, then flatten transforms with one svgo folder pass.
                 cp -rL "$src/symbolic" "$dst/symbolic"
                 chmod -R u+w "$dst/symbolic"
                 find "$dst/symbolic" -name '*.svg' -exec \
@@ -326,12 +280,8 @@
 
           fontSet = font: font.name != "" && font.package != "";
 
-          # Stylix splits targets between system-level (`feh`, `sddm`, ...) and
-          # the per-user home-manager plane (`zed`, `vscode`, ...). A small set
-          # lives on both (`gtk`, `nvf`). Use the live system option registry
-          # to route each user-supplied `cfg.targets.<x>` to whichever plane(s)
-          # actually declare that target, so users don't have to know which is
-          # which.
+          # Route each target to the plane(s) that declare it (system, HM, or
+          # both like gtk/nvf) via the live option registry.
           systemTargetNames = attrNames (options.stylix.targets or { });
 
           bothTargetNames = [
@@ -339,7 +289,7 @@
             "nvf"
           ];
 
-          # `disabledTargets` is sugar; recursiveUpdate lets explicit `cfg.targets.<name>` win on conflict.
+          # Sugar for target disables; explicit `cfg.targets.<name>` wins on conflict.
           disabledTargetsAttrs = listToAttrs (
             map (name: {
               inherit name;
@@ -355,7 +305,7 @@
             n: _: !(builtins.elem n systemTargetNames) || builtins.elem n bothTargetNames
           ) mergedTargets;
         in
-        mkIf cfg.enable {
+        {
           stylix = mkMerge [
             {
               inherit (cfg) autoEnable polarity;
@@ -365,69 +315,28 @@
               base16Scheme = accentPatchedBase16Scheme;
             }
 
-            # Stylix auto-detects gnome and sets `qt.platform = "gnome"`,
-            # which (a) is unsupported on stylix's own qt HM target (only
-            # `qtct` works) and (b) maps to the deprecated nixpkgs value
-            # `qt.platformTheme.name = "gnome"`. Pin to qtct to silence
-            # both warnings and route Qt apps through the supported path.
-            # (Skipped under Plasma — the qt target is disabled there, below.)
+            # Stylix auto-picks "gnome" for qt.platform, unsupported on its own
+            # qt target; pin qtct (skipped under Plasma, where qt is disabled).
             (mkIf (!config.services.desktopManager.plasma6.enable) {
               targets.qt.platform = lib.mkForce "qtct";
             })
 
-            # NixOS-plane mirror of the HM-plane qt-target kill further down.
-            # Stylix ships a SECOND qt target on the system plane
-            # (`modules/qt/nixos.nix`); the HM `mkForce false` doesn't reach it,
-            # so under Plasma it stayed enabled and — because the `qtct` pin
-            # above overrode its plasma6 auto-pick of "kde" — set
-            # `qt.platformTheme = "qt5ct"`, exporting `QT_QPA_PLATFORMTHEME=qt5ct`
-            # into the session. That routed every Qt app through qt5ct instead
-            # of Plasma's KDE platform theme, so QtQuick/Kirigami apps (System
-            # Settings, Discover) fell back to the light QQC2 style while QWidget
-            # apps (Dolphin) read the dark palette — half-themed. Plasma owns Qt
-            # theming via the `kde` target + plasma-integration, so disable this
-            # plane too; with no `QT_QPA_PLATFORMTHEME` override the KDE platform
-            # theme loads automatically and QQC2 uses `org.kde.desktop`.
+            # Mirror the qt-target kill on the system plane: otherwise Plasma Qt
+            # apps route through qt5ct (QT_QPA_PLATFORMTHEME) and half-theme.
             (mkIf config.services.desktopManager.plasma6.enable {
               targets.qt.enable = lib.mkForce false;
             })
 
-            # Stylix's `gnome` target rewrites the entire gnome-shell theme
-            # via a base16-mustache SCSS render, plus patches gnome-shell to
-            # drop the Dark Style toggle. That tints every panel popup
-            # (calendar, notifications, app-grid, language menu, ...) with
-            # base01/base02/base03 instead of upstream Adwaita greys, which
-            # ends up looking off across most of the shell. Disable the
-            # target on both NixOS and home-manager planes so gnome-shell
-            # renders with its bundled upstream Adwaita theme. Stylix's
-            # accent / dark-mode / wallpaper integration is reattached via
-            # dconf below. The `gtk` target stays on for libadwaita apps.
+            # The gnome target tints shell popups with base01-03 instead of
+            # Adwaita greys; keep upstream gnome-shell, reattach via dconf below.
             { targets.gnome.enable = lib.mkForce false; }
 
-            # Stylix's `gtksourceview` target ships an overlay that patches
-            # all four gtksourceview variants (`gnome2.gtksourceview`,
-            # `gtksourceview`, `gtksourceview4`, `gtksourceview5`) to drop
-            # a generated `stylix.xml` color scheme into
-            # `share/gtksourceview-<v>/styles/`. Patching the derivations
-            # breaks cache hits and forces every dependent (gnome-calculator,
-            # gnome-text-editor, gnome-builder, gedit, meld, ...) to rebuild
-            # on every config change. Disable the target on both planes; the
-            # same xml is installed via `environment.systemPackages` below
-            # using the upstream mustache template + base16 renderer so the
-            # feature stays without mutating any nixpkgs derivation.
+            # Its overlay patches gtksourceview derivations (breaks cache);
+            # ship the same xml via environment.systemPackages below instead.
             { targets.gtksourceview.enable = lib.mkForce false; }
 
-            # Stylix's `nixos-icons` overlay recolours the NixOS snowflake to
-            # the active scheme and embeds it as the GDM greeter logo via gdm's
-            # `org.gnome.login-screen.gschema.override`. That repoints the
-            # override at the overlaid nixos-icons store path, changing the
-            # `gdm` derivation. gnome-shell build-depends on gdm (libgdm), so
-            # gnome-shell rebuilds, and gnome-session / gnome-initial-setup /
-            # gnome-tweaks / gnome-browser-connector cascade — none cached,
-            # forcing a full local GNOME-stack compile on every nixpkgs bump.
-            # Disable the target so the greeter keeps the cached upstream logo
-            # and the GNOME closure substitutes from cache. (Same cache
-            # rationale as the gnome / gtksourceview disables above.)
+            # The nixos-icons overlay repoints gdm's logo, rebuilding gdm +
+            # gnome-shell (cache miss); keep the cached upstream logo instead.
             { targets.nixos-icons.enable = lib.mkForce false; }
 
             {
@@ -469,15 +378,8 @@
 
               systemPlasma6 = config.services.desktopManager.plasma6.enable;
 
-              # Stylix's KDE target hardcodes the Plasma color scheme's
-              # [Colors:Selection] foregrounds to base00 (dark), so selected
-              # list items / highlighted text paint black on the accent fill
-              # instead of the accent-foreground used everywhere else (the GTK
-              # path gets accentFgHex below). Recompute that accent foreground
-              # as an "R,G,B" triple — base07 on dark, base00 on light, the
-              # same slot accentFgHex uses — and patch only that section of
-              # stylix's generated `.colors`, shipped at XDG_DATA_HOME priority
-              # below so it overrides the read-only profile copy.
+              # Stylix hardcodes [Colors:Selection] foregrounds to base00 (black
+              # on accent); patch them to the real accent fg (base07/base00) below.
               kdeSelectionFgSlot = if isLight then "base00" else "base07";
 
               kdeSelectionFgRgb = lib.concatMapStringsSep "," (c: colors."${kdeSelectionFgSlot}-rgb-${c}") [
@@ -491,14 +393,8 @@
                 lib.filter lib.isString (builtins.split "[^a-zA-Z]" colors.scheme)
               );
 
-              # libadwaita's named-color set drives every modern GTK4 app's
-              # surfaces (Files, Console, Settings, Calendar, Calculator, ...).
-              # Stylix's stock gtk target only writes the older `theme_*_color`
-              # family, so without these explicit overrides every libadwaita
-              # surface collapses to a single fallback and the
-              # sidebar/headerbar/view hierarchy disappears. Map each named
-              # color to the corresponding base16 slot so the hierarchy follows
-              # the active palette regardless of which scheme is selected.
+              # Stylix's gtk target only writes theme_*_color, collapsing
+              # libadwaita's named colors; map each to its base16 slot.
               libadwaitaCss = ''
                 @define-color window_bg_color #${colors.base01};
                 @define-color window_fg_color #${colors.base05};
@@ -569,10 +465,8 @@
 
                 @define-color accent_fg_color ${accentFgHex};
 
-                /* Chromium reads accent foreground from these GTK treeview
-                   selectors (see chromium/src ui/gtk/gtk_color_mixers.cc).
-                   Override so chromium browsers get a
-                   contrasting label on accent buttons. */
+                /* Chromium reads accent fg from these treeview selectors
+                   (ui/gtk/gtk_color_mixers.cc); give it a contrasting label. */
                 treeview.view treeview.view.cell:selected:focus,
                 treeview.view treeview.view.cell:selected:focus label {
                   background-color: ${accentHex};
@@ -594,14 +488,8 @@
                 ];
               }
 
-              # GTK-plane-only symbolic icon fix: repoint gtk.iconTheme (set by
-              # stylix/hm/icons.nix) at the Adwaita-symbolic variant so
-              # libadwaita apps get GTK4-clean symbolic SVGs. dconf icon-theme
-              # and gtk-{3,4}.0/settings.ini follow the name automatically.
-              # Re-add the FULL theme to home.packages: repointing
-              # gtk.iconTheme.package was the only thing installing it under
-              # stylix, and Plasma (kdeglobals) + COSMIC (toolkit RON) still
-              # resolve "Tela-black-dark" by name, so it must stay on the path.
+              # Point the GTK icon-theme plane at the repaired -gtk variant (dconf
+              # follows the name); keep the full theme for Plasma/COSMIC resolution.
               (
                 { config, lib, ... }:
                 lib.mkIf cfg.iconTheme.enable {
@@ -613,27 +501,16 @@
                 }
               )
 
-              # HM-plane mirror of the system disable above. Stylix declares
-              # `targets.gnome.enable` separately on the user plane, so the
-              # mkForce on system doesn't reach the HM activation that writes
-              # `themes/Stylix/gnome-shell/gnome-shell.css` and the
-              # user-theme dconf key. Disable here too.
+              # HM-plane mirror: the system mkForce doesn't reach the user-plane
+              # target writing gnome-shell.css / the user-theme dconf key.
               { stylix.targets.gnome.enable = lib.mkForce false; }
 
-              # HM-plane mirror of the system gtksourceview disable. Stylix's
-              # `gtksourceview` HM target writes the rendered `stylix.xml`
-              # into `~/.local/share/gtksourceview-<v>/styles/` via
-              # `xdg.dataFile`; the mkForce on system doesn't reach that
-              # activation, so disable on HM too. The replacement xml is
-              # shipped system-wide via `environment.systemPackages` above
-              # so HM-plane delivery is redundant anyway.
+              # HM-plane mirror: its HM target writes stylix.xml via xdg.dataFile;
+              # the system copy (environment.systemPackages) makes it redundant.
               { stylix.targets.gtksourceview.enable = lib.mkForce false; }
 
-              # Ship the selection-fixed Plasma color scheme at XDG_DATA_HOME
-              # priority so plasma-apply-lookandfeel resolves it ahead of the
-              # stylix profile copy (same slug). Reuses stylix's own generated
-              # `.colors` and rewrites only the [Colors:Selection] foregrounds,
-              # so any other stylix color stays authoritative. Plasma 6 only.
+              # Ship the selection-fixed scheme at XDG_DATA_HOME so it beats
+              # stylix's profile copy; only [Colors:Selection] fg is rewritten.
               (
                 { config, ... }:
                 lib.mkIf systemPlasma6 {
@@ -655,24 +532,14 @@
                 }
               )
 
-              # HM-plane qt target kill under Plasma 6. Stylix's HM qt target
-              # hardcodes `qt.style.name = "kvantum"` → exports
-              # QT_STYLE_OVERRIDE=kvantum into ~/.config/environment.d. Plasma 6's
-              # QQC2 then `import kvantum` in every plasmashell/kwin/spectacle QML,
-              # fails ("module kvantum is not installed" — nixpkgs ships only the
-              # kvantum Qt Widgets style, no QQC2 module) and plasmashell never
-              # paints. Plasma owns Qt theming via the `kde` target + plasma-apply-*,
-              # so the qt target is redundant under Plasma anyway.
+              # Under Plasma the HM qt target exports QT_STYLE_OVERRIDE=kvantum,
+              # which QQC2 can't import (no QQC2 module); Plasma owns Qt theming.
               (mkIf config.services.desktopManager.plasma6.enable {
                 stylix.targets.qt.enable = lib.mkForce false;
               })
 
-              # Reattach the dconf bits stylix's gnome target used to set:
-              # - color-scheme: follow stylix polarity.
-              # - wallpaper: when stylix.image is set.
-              # `accent-color` is owned by the gnome module (single writer
-              # to avoid double-definition when both modules are active);
-              # it reads `icedosLib.generateAccent` for the resolved name.
+              # Reattach dconf bits the gnome target used to set (color-scheme,
+              # wallpaper); accent-color stays owned by the gnome module.
               {
                 dconf.settings = {
                   "org/gnome/desktop/interface" = {

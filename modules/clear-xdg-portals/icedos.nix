@@ -22,10 +22,8 @@
                 ${pkgs.coreutils}/bin/rm -rf -- "$HOME/.config/$PORTAL"
                 ${pkgs.coreutils}/bin/rm -rf -- "$HOME/.cache/$PORTAL"
 
-                # System-wide dirs need the setuid wrapper (a store-path sudo
-                # binary is not setuid). Guard with an existence check so the
-                # deletions no-op cleanly when absent (e.g. /usr/share/... does
-                # not exist on stock NixOS).
+                # System dirs need the setuid wrapper (a store-path binary is
+                # not setuid); guard so deletions no-op when absent.
                 for dir in "/etc/xdg/$PORTAL" "/usr/share/$PORTAL"; do
                   if [ -e "$dir" ]; then
                     log_warn "removing system portal directory $dir (sudo)"

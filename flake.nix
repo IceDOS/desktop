@@ -5,12 +5,8 @@
       icedosModules =
         { icedosLib, ... }:
         icedosLib.scanModules {
-          # Scan the repo's own source tree (not `./modules`): a bare
-          # `./modules` literal is coerced to a fresh per-subdir store copy
-          # (`<hash>-modules`), which has no `lib.nix` at its parent — the
-          # `default` module's `lib = import ../../lib.nix` contribution would
-          # climb out of the store. `self` keeps `_sourceFile` inside the full
-          # repo tree so repo-root-relative imports resolve.
+          # Scan `self` (not `./modules`): a bare dir literal is a store copy
+          # without the repo root, breaking the default module's ../../lib.nix.
           path = "${self}/modules";
           filename = "icedos.nix";
         };
