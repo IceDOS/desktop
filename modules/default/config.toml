@@ -1,8 +1,6 @@
 [icedos.desktop]
 accentColor = "" # Accepts a libadwaita name (blue/teal/green/yellow/orange/red/pink/purple/slate), a base16 slot (base08..base0F), or a hex (RRGGBB / #RRGGBB). Empty defaults to "purple". Under GNOME, non-name inputs trigger a warning since GNOME's accent-color dconf key only accepts named values.
 autologinUser = ""
-defaultBrowser = ""
-defaultEditor = ""
 keyboardLayouts = [] # xkb layouts, e.g. ["us", "gr"] (first is primary). Empty = leave each DE at its own default (no layout override).
 timezone = "Europe/Bucharest"
 wallpaper = "" # Absolute path to image. Empty = user/UI-managed (no rebuild override).
@@ -45,6 +43,46 @@ seconds = 900
 [icedos.desktop.users.username.idle.suspend]
 enable = true
 seconds = 1800
+
+# [icedos.desktop.applications.*]
+# name = "" # Desktop-id; empty = unmanaged (DE/apps decide)
+# package = "" # Nixpkgs name; empty = not auto-installed
+
+[icedos.desktop.applications.audio-player]
+name = "io.bassi.Amberol.desktop"
+package = "amberol"
+
+[icedos.desktop.applications.browser]
+name = ""
+package = ""
+
+[icedos.desktop.applications.editor]
+name = ""
+package = ""
+
+[icedos.desktop.applications.archive-manager]
+name = ""
+package = ""
+
+[icedos.desktop.applications.image-viewer]
+name = "org.gnome.Loupe.desktop"
+package = "loupe"
+
+[icedos.desktop.applications.office-suite]
+name = "onlyoffice-desktopeditors.desktop"
+package = "onlyoffice-desktopeditors"
+
+[icedos.desktop.applications.torrent]
+name = "de.haeckerfelix.Fragments.desktop"
+package = "fragments"
+
+[icedos.desktop.applications.video-player]
+name = "io.github.celluloid_player.Celluloid.desktop"
+package = "celluloid"
+
+[icedos.desktop.applications.wine]
+name = "io.github.Faugus.faugus-launcher.desktop"
+package = "faugus-launcher"
 
 [icedos.desktop.xdg-desktop-portal]
 forceGtkFilePicker = false

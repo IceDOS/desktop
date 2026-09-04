@@ -25,11 +25,10 @@
 
       inherit ((importTOML ./config.toml).icedos.desktop)
         accentColor
+        applications
         autologinUser
         bookmarks
         clock
-        defaultBrowser
-        defaultEditor
         keyboardLayouts
         timezone
         users
@@ -42,9 +41,55 @@
     in
     {
       accentColor = mkStrOption { default = accentColor; };
+
+      applications = {
+        audio-player = {
+          package = mkStrOption { default = applications.audio-player.package; };
+          name = mkStrOption { default = applications.audio-player.name; };
+        };
+
+        browser = {
+          package = mkStrOption { default = applications.browser.package; };
+          name = mkStrOption { default = applications.browser.name; };
+        };
+
+        editor = {
+          package = mkStrOption { default = applications.editor.package; };
+          name = mkStrOption { default = applications.editor.name; };
+        };
+
+        archive-manager = {
+          package = mkStrOption { default = applications.archive-manager.package; };
+          name = mkStrOption { default = applications.archive-manager.name; };
+        };
+
+        image-viewer = {
+          package = mkStrOption { default = applications.image-viewer.package; };
+          name = mkStrOption { default = applications.image-viewer.name; };
+        };
+
+        office-suite = {
+          package = mkStrOption { default = applications.office-suite.package; };
+          name = mkStrOption { default = applications.office-suite.name; };
+        };
+
+        torrent = {
+          package = mkStrOption { default = applications.torrent.package; };
+          name = mkStrOption { default = applications.torrent.name; };
+        };
+
+        video-player = {
+          package = mkStrOption { default = applications.video-player.package; };
+          name = mkStrOption { default = applications.video-player.name; };
+        };
+
+        wine = {
+          package = mkStrOption { default = applications.wine.package; };
+          name = mkStrOption { default = applications.wine.name; };
+        };
+      };
+
       autologinUser = mkStrOption { default = autologinUser; };
-      defaultBrowser = mkStrOption { default = defaultBrowser; };
-      defaultEditor = mkStrOption { default = defaultEditor; };
       keyboardLayouts = mkStrListOption { default = keyboardLayouts; };
       timezone = mkStrOption { default = timezone; };
       wallpaper = mkStrOption { default = wallpaper; };
@@ -189,21 +234,16 @@
           };
 
           inherit (desktop)
+            applications
             autologinUser
-            defaultBrowser
-            defaultEditor
             timezone
             xdg-desktop-portal
             ;
 
           resolved = generateAccent config;
 
-          audioPlayer = "io.bassi.Amberol.desktop";
-          browser = mkIf (defaultBrowser != "") defaultBrowser;
-          editor = mkIf (defaultEditor != "") defaultEditor;
-
-          imageViewer = "org.gnome.Loupe.desktop";
-          videoPlayer = "io.github.celluloid_player.Celluloid.desktop";
+          # Mime-wire on desktop-id alone; the package may be installed by the app's own module.
+          nameOf = app: mkIf (app.name != "") app.name;
         in
         {
           icedos.desktop.users = genDefaults {
@@ -213,19 +253,22 @@
           warnings = optional (resolved.warning != null) resolved.warning;
 
           environment = {
-            systemPackages = with pkgs; [
-              adwaita-icon-theme # Gtk theme
-              amberol # Music player
-              dconf-editor # Edit gnome's dconf
-              libnotify # Send desktop notifications
-              loupe # Image viewer
-              onlyoffice-desktopeditors # Office tools
+            # Install every mime-default app; any new option under
+            # `icedos.desktop.applications.*` is auto-hooked (packages resolved via icedosLib).
+            systemPackages =
+              icedosLib.pkgs.mapper pkgs (
+                map (app: app.package) (builtins.filter (app: app.package != "") (builtins.attrValues applications))
+              )
+              ++ (with pkgs; [
+                adwaita-icon-theme # Gtk theme
+                dconf-editor # Edit gnome's dconf
+                libnotify # Send desktop notifications
 
-              # Qt Wayland decoration plugins reading the GNOME button-layout
-              # dconf key, so Qt apps honor `icedos.desktop.titlebar.*`.
-              qadwaitadecorations
-              qadwaitadecorations-qt6
-            ];
+                # Qt Wayland decoration plugins reading the GNOME button-layout
+                # dconf key, so Qt apps honor `icedos.desktop.titlebar.*`.
+                qadwaitadecorations
+                qadwaitadecorations-qt6
+              ]);
 
             sessionVariables = {
               NIXOS_OZONE_WL = 1;
@@ -267,36 +310,60 @@
               enable = true;
 
               defaultApplications = {
-                "application/json" = editor;
-                "application/pdf" = browser;
-                "application/x-bittorrent" = "de.haeckerfelix.Fragments.desktop";
-                "application/x-ms-dos-executable" = "wine.desktop";
-                "application/x-shellscript" = editor;
-                "application/x-wine-extension-ini" = editor;
-                "application/x-zerosize" = editor;
-                "application/xhtml_xml" = browser;
-                "application/xhtml+xml" = browser;
-                "application/zip" = "org.gnome.FileRoller.desktop";
-                "audio/aac" = audioPlayer;
-                "audio/flac" = audioPlayer;
-                "audio/m4a" = audioPlayer;
-                "audio/mp3" = audioPlayer;
-                "audio/wav" = audioPlayer;
-                "image/avif" = imageViewer;
-                "image/jpeg" = imageViewer;
-                "image/png" = imageViewer;
-                "image/svg+xml" = imageViewer;
-                "text/html" = browser;
-                "text/plain" = editor;
-                "video/mp4" = videoPlayer;
-                "video/quicktime" = videoPlayer;
-                "video/x-matroska" = videoPlayer;
-                "video/x-ms-wmv" = videoPlayer;
-                "x-scheme-handler/about" = browser;
-                "x-scheme-handler/http" = browser;
-                "x-scheme-handler/https" = browser;
-                "x-scheme-handler/unknown" = browser;
-                "x-www-browser" = browser;
+                "application/json" = nameOf applications.editor;
+                "application/msword" = nameOf applications.office-suite;
+                "application/oxps" = nameOf applications.office-suite;
+                "application/pdf" = nameOf applications.browser;
+                "application/rtf" = nameOf applications.office-suite;
+                "application/vnd.ms-excel" = nameOf applications.office-suite;
+                "application/vnd.ms-powerpoint" = nameOf applications.office-suite;
+                "application/vnd.ms-xpsdocument" = nameOf applications.office-suite;
+                "application/vnd.oasis.opendocument.presentation" = nameOf applications.office-suite;
+                "application/vnd.oasis.opendocument.presentation-template" = nameOf applications.office-suite;
+                "application/vnd.oasis.opendocument.spreadsheet" = nameOf applications.office-suite;
+                "application/vnd.oasis.opendocument.spreadsheet-template" = nameOf applications.office-suite;
+                "application/vnd.oasis.opendocument.text" = nameOf applications.office-suite;
+                "application/vnd.oasis.opendocument.text-template" = nameOf applications.office-suite;
+
+                "application/vnd.openxmlformats-officedocument.presentationml.presentation" =
+                  nameOf applications.office-suite;
+
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" =
+                  nameOf applications.office-suite;
+
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document" =
+                  nameOf applications.office-suite;
+
+                "application/x-bittorrent" = nameOf applications.torrent;
+                "application/x-ms-dos-executable" = nameOf applications.wine;
+                "application/x-shellscript" = nameOf applications.editor;
+                "application/x-wine-extension-ini" = nameOf applications.editor;
+                "application/x-zerosize" = nameOf applications.editor;
+                "application/xhtml_xml" = nameOf applications.browser;
+                "application/xhtml+xml" = nameOf applications.browser;
+                "application/zip" = nameOf applications.archive-manager;
+                "audio/aac" = nameOf applications.audio-player;
+                "audio/flac" = nameOf applications.audio-player;
+                "audio/m4a" = nameOf applications.audio-player;
+                "audio/mp3" = nameOf applications.audio-player;
+                "audio/wav" = nameOf applications.audio-player;
+                "image/avif" = nameOf applications.image-viewer;
+                "image/jpeg" = nameOf applications.image-viewer;
+                "image/png" = nameOf applications.image-viewer;
+                "image/svg+xml" = nameOf applications.image-viewer;
+                "text/csv" = nameOf applications.office-suite;
+                "text/html" = nameOf applications.browser;
+                "text/plain" = nameOf applications.editor;
+                "text/tab-separated-values" = nameOf applications.office-suite;
+                "video/mp4" = nameOf applications.video-player;
+                "video/quicktime" = nameOf applications.video-player;
+                "video/x-matroska" = nameOf applications.video-player;
+                "video/x-ms-wmv" = nameOf applications.video-player;
+                "x-scheme-handler/about" = nameOf applications.browser;
+                "x-scheme-handler/http" = nameOf applications.browser;
+                "x-scheme-handler/https" = nameOf applications.browser;
+                "x-scheme-handler/unknown" = nameOf applications.browser;
+                "x-www-browser" = nameOf applications.browser;
               };
             };
           };
