@@ -17,6 +17,7 @@
             length
             mkIf
             optional
+            optionals
             ;
 
           inherit (config.icedos) hardware;
@@ -85,6 +86,14 @@
               };
             }
           ];
+
+          icedos.system.tips.list =
+            optionals (gnome || hyprland) [
+              "icedos displays info lists your monitors with their resolution and refresh rate."
+            ]
+            ++ optionals hyprland [
+              "icedos displays xprimary picks the monitor older X11 apps treat as the main one."
+            ];
 
           home-manager.sharedModules = [
             {

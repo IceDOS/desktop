@@ -15,7 +15,7 @@
       (
         { config, lib, ... }:
         let
-          inherit (lib) listToAttrs;
+          inherit (lib) listToAttrs optionals;
           inherit (config.icedos.desktop) entries;
 
           validEntry = e: e ? id && builtins.isString e.id && e.id != "";
@@ -36,6 +36,13 @@
                 ) entries
               );
             }
+          ];
+
+          icedos.system.tips.list = [
+            "Add your own shortcuts to the app menu with entries under [icedos.desktop]."
+          ]
+          ++ optionals (entries != [ ]) [
+            "Your custom shortcuts sit in the app menu next to the normal apps."
           ];
         }
       )

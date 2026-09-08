@@ -37,6 +37,10 @@
               help = "remove all xdg portal files, useful if portals are malfunctioning";
             }
           ];
+
+          icedos.system.tips.list = [
+            "Run icedos clear-portals when file pickers or screen sharing misbehave."
+          ];
         }
       )
     ];

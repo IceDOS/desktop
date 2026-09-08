@@ -216,6 +216,9 @@
           inherit (icedosLib.users) genDefaults;
 
           inherit (lib)
+            any
+            attrValues
+            length
             mapAttrs
             mkDefault
             mkForce
@@ -223,6 +226,7 @@
             mkMerge
             optional
             optionalAttrs
+            optionals
             ;
 
           inherit (config.icedos) desktop users;
@@ -244,6 +248,8 @@
 
           # Mime-wire on desktop-id alone; the package may be installed by the app's own module.
           nameOf = app: mkIf (app.name != "") app.name;
+
+          anyUserIdle = f: any (u: f u.idle) (attrValues desktop.users);
         in
         {
           icedos.desktop.users = genDefaults {
@@ -251,6 +257,36 @@
           };
 
           warnings = optional (resolved.warning != null) resolved.warning;
+
+          icedos.system.tips.list = [
+            "Pick the color of buttons, switches and highlights with accentColor under [icedos.desktop]."
+            "Your default apps for video, music, images and documents are set under [icedos.desktop.applications]."
+            "The clock can show the date, the weekday and seconds; turn each on under [icedos.desktop.clock]."
+            "The folder shortcuts in your file manager come from [icedos.desktop.bookmarks]; add more with extras."
+            "Hide the minimize or maximize button on window titlebars under [icedos.desktop.windows]."
+            "Set wallpaper under [icedos.desktop] to a picture path, or to color:RRGGBB for a plain color."
+          ]
+          ++ optionals (autologinUser != "") [
+            "Autologin is on, so this machine signs ${autologinUser} in without asking for a password."
+          ]
+          ++ optionals (length desktop.keyboardLayouts > 1) [
+            "You set up more than one keyboard layout, so you can switch layouts while typing."
+          ]
+          ++ optionals desktop.windows.focus.followsMouse [
+            "Windows take focus when your mouse moves over them, no click needed."
+          ]
+          ++ optionals xdg-desktop-portal.forceGtkFilePicker [
+            "Every app opens the same file picker, so Open and Save dialogs always look alike."
+          ]
+          ++ optionals (anyUserIdle (i: i.lock.enable)) [
+            "Your screen locks itself when you step away; change the wait under [icedos.desktop.users.<name>.idle.lock]."
+          ]
+          ++ optionals (anyUserIdle (i: i.disable-monitors.enable)) [
+            "Your screens switch off on their own when idle; the wait is under [icedos.desktop.users.<name>.idle]."
+          ]
+          ++ optionals (anyUserIdle (i: i.suspend.enable)) [
+            "This machine suspends after a long idle; turn that off under [icedos.desktop.users.<name>.idle.suspend]."
+          ];
 
           environment = {
             # Install every mime-default app; any new option under

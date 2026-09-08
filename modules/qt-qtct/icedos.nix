@@ -73,6 +73,10 @@
 
         in
         (mkIf (qtQtct && !config.services.desktopManager.plasma6.enable) {
+          icedos.system.tips.list = [
+            "Qt apps follow your accent color as well, so they match the rest of the desktop."
+          ];
+
           home-manager.sharedModules = [
             (
               { config, ... }:

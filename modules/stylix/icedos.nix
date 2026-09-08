@@ -124,6 +124,7 @@
             mkIf
             mkMerge
             importTOML
+            optionals
             recursiveUpdate
             removeSuffix
             ;
@@ -306,6 +307,22 @@
           ) mergedTargets;
         in
         {
+          icedos.system.tips.list = [
+            "One color theme covers your apps, terminal and desktop; pick it with base16Scheme under [icedos.desktop.stylix]."
+            "Switch the whole desktop between light and dark with polarity under [icedos.desktop.stylix]."
+            "Fonts and their size for every app are set under [icedos.desktop.stylix.fonts]."
+            "Cursor theme and cursor size come from [icedos.desktop.stylix.cursorTheme]."
+          ]
+          ++ optionals cfg.iconTheme.enable [
+            "Your icon set comes from [icedos.desktop.stylix.iconTheme]; change package there to swap it."
+          ]
+          ++ optionals (cfg.image != "") [
+            "Your wallpaper is set in config, so it comes back after every rebuild."
+          ]
+          ++ optionals (cfg.disabledTargets != [ ]) [
+            "Some apps are left out of the stylix theming on purpose and keep their own look."
+          ];
+
           stylix = mkMerge [
             {
               inherit (cfg) autoEnable polarity;

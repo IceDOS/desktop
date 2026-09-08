@@ -39,6 +39,14 @@
             "getty@tty1".enable = false;
             "autovt@tty1".enable = false;
           };
+
+          icedos.system.tips.list =
+            lib.optionals autoSuspend [
+              "The login screen suspends the machine when nobody signs in; turn autoSuspend off under [icedos.desktop.gdm]."
+            ]
+            ++ lib.optionals (keyboardLayouts != [ ]) [
+              "Your keyboard layouts work on the login screen too, not only after you sign in."
+            ];
         }
       )
     ];

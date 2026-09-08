@@ -39,6 +39,12 @@
             }
           ];
 
+          icedos.system.tips.list = [
+            "icedos session lock locks your screen right away."
+            "icedos session disable-monitors turns the screens off without suspending the machine."
+          ]
+          ++ optional desktopEntries "Lock and Disable Monitors are in your app menu, ready for a keyboard shortcut.";
+
           home-manager.sharedModules = optional desktopEntries {
             xdg.desktopEntries.icedos-lock = {
               name = "Lock";

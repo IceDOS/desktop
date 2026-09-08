@@ -54,6 +54,13 @@
               }
             )
           ];
+
+          icedos.system.tips.list = [
+            "Commands in startupScript under [icedos.desktop.users.<name>] run every time you log in."
+          ]
+          ++ lib.optionals (lib.any (u: u.startupScript != "") (lib.attrValues desktop.users)) [
+            "A startup script runs at every login; empty [icedos.desktop.users.<name>] startupScript to stop it."
+          ];
         }
       )
     ];
