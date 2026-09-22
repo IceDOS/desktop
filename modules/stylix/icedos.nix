@@ -266,7 +266,9 @@
                 done
                 # Deref-copy symbolic so it's writable, strip GTK4-invalid
                 # attrs, then flatten transforms with one svgo folder pass.
-                cp -rL "$src/symbolic" "$dst/symbolic"
+                # Tolerate dangling links (Tela 2026-07-07 ships one dead
+                # symlink); cp skips it and copies the rest.
+                cp -rL "$src/symbolic" "$dst/symbolic" || true
                 chmod -R u+w "$dst/symbolic"
                 find "$dst/symbolic" -name '*.svg' -exec \
                   sed -i -E 's/ (style|class|stop-color|paint-order|stroke[a-z-]*|fill-rule)="[^"]*"//g' {} +
