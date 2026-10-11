@@ -60,6 +60,10 @@ package = ""
 name = ""
 package = ""
 
+[icedos.desktop.applications.files]
+name = ""
+package = ""
+
 [icedos.desktop.applications.archive-manager]
 name = ""
 package = ""
