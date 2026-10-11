@@ -58,6 +58,11 @@
           name = mkStrOption { default = applications.editor.name; };
         };
 
+        files = {
+          package = mkStrOption { default = applications.files.package; };
+          name = mkStrOption { default = applications.files.name; };
+        };
+
         archive-manager = {
           package = mkStrOption { default = applications.archive-manager.package; };
           name = mkStrOption { default = applications.archive-manager.name; };
@@ -387,6 +392,7 @@
                 "image/jpeg" = nameOf applications.image-viewer;
                 "image/png" = nameOf applications.image-viewer;
                 "image/svg+xml" = nameOf applications.image-viewer;
+                "inode/directory" = nameOf applications.files;
                 "text/csv" = nameOf applications.office-suite;
                 "text/html" = nameOf applications.browser;
                 "text/plain" = nameOf applications.editor;
