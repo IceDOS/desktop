@@ -21,10 +21,10 @@
       inherit ((importTOML ./config.toml).icedos.desktop.stylix)
         autoEnable
         base16Scheme
-        cursorTheme
+        cursor-theme
         disabledTargets
         fonts
-        iconTheme
+        icon-theme
         image
         polarity
         ;
@@ -71,8 +71,8 @@
         '';
       };
 
-      cursorTheme = mkAttrsOption { default = cursorTheme; };
-      iconTheme = mkAttrsOption { default = iconTheme; };
+      cursor-theme = mkAttrsOption { default = cursor-theme; };
+      icon-theme = mkAttrsOption { default = icon-theme; };
       fonts = mkAttrsOption { default = fonts; };
 
       targets = mkAttrsOption {
@@ -132,13 +132,13 @@
           stylixLib = import ./lib.nix { inherit lib pkgs; };
 
           # Untyped attrs options replace defaults wholesale; re-merge TOML
-          # defaults so a partial user override keeps `cfg.iconTheme.enable` resolvable.
+          # defaults so a partial user override keeps `cfg.icon-theme.enable` resolvable.
           tomlDefaults = (importTOML ./config.toml).icedos.desktop.stylix;
           rawCfg = config.icedos.desktop.stylix;
 
           cfg = rawCfg // {
-            cursorTheme = tomlDefaults.cursorTheme // rawCfg.cursorTheme;
-            iconTheme = tomlDefaults.iconTheme // rawCfg.iconTheme;
+            cursor-theme = tomlDefaults.cursor-theme // rawCfg.cursor-theme;
+            icon-theme = tomlDefaults.icon-theme // rawCfg.icon-theme;
             fonts = mapAttrs (n: d: d // (rawCfg.fonts.${n} or { })) tomlDefaults.fonts;
           };
 
@@ -210,19 +210,19 @@
               stylixLib.fallbackTheme.cursorName schemeName accentName;
 
           iconsPackage =
-            if cfg.iconTheme.package == "" then autoIconsPackage else resolvePkg cfg.iconTheme.package;
+            if cfg.icon-theme.package == "" then autoIconsPackage else resolvePkg cfg.icon-theme.package;
 
           autoIconsDark =
-            if cfg.iconTheme.dark != "" then
-              cfg.iconTheme.dark
+            if cfg.icon-theme.dark != "" then
+              cfg.icon-theme.dark
             else if theme ? iconsDark then
               theme.iconsDark schemeName accentName
             else
               "Papirus-Dark";
 
           autoIconsLight =
-            if cfg.iconTheme.light != "" then
-              cfg.iconTheme.light
+            if cfg.icon-theme.light != "" then
+              cfg.icon-theme.light
             else if theme ? iconsLight then
               theme.iconsLight schemeName accentName
             else
@@ -313,10 +313,10 @@
             "One color theme covers your apps, terminal and desktop; pick it with base16Scheme under [icedos.desktop.stylix]."
             "Switch the whole desktop between light and dark with polarity under [icedos.desktop.stylix]."
             "Fonts and their size for every app are set under [icedos.desktop.stylix.fonts]."
-            "Cursor theme and cursor size come from [icedos.desktop.stylix.cursorTheme]."
+            "Cursor theme and cursor size come from [icedos.desktop.stylix.cursor-theme]."
           ]
-          ++ optionals cfg.iconTheme.enable [
-            "Your icon set comes from [icedos.desktop.stylix.iconTheme]; change package there to swap it."
+          ++ optionals cfg.icon-theme.enable [
+            "Your icon set comes from [icedos.desktop.stylix.icon-theme]; change package there to swap it."
           ]
           ++ optionals (cfg.image != "") [
             "Your wallpaper is set in config, so it comes back after every rebuild."
@@ -359,16 +359,16 @@
             { targets.nixos-icons.enable = lib.mkForce false; }
 
             {
-              cursor.name = if cfg.cursorTheme.name != "" then cfg.cursorTheme.name else autoCursorName;
+              cursor.name = if cfg.cursor-theme.name != "" then cfg.cursor-theme.name else autoCursorName;
 
               cursor.package =
-                if cfg.cursorTheme.package != "" then resolvePkg cfg.cursorTheme.package else autoCursorPackage;
+                if cfg.cursor-theme.package != "" then resolvePkg cfg.cursor-theme.package else autoCursorPackage;
 
-              cursor.size = if cfg.cursorTheme.size > 0 then cfg.cursorTheme.size else 24;
+              cursor.size = if cfg.cursor-theme.size > 0 then cfg.cursor-theme.size else 24;
             }
 
-            (mkIf (!cfg.iconTheme.enable) { icons.enable = false; })
-            (mkIf cfg.iconTheme.enable {
+            (mkIf (!cfg.icon-theme.enable) { icons.enable = false; })
+            (mkIf cfg.icon-theme.enable {
               icons.enable = true;
               icons.package = iconsPackage;
               icons.dark = autoIconsDark;
@@ -376,7 +376,7 @@
             })
 
             (mkIf (fontSet cfg.fonts.monospace) { fonts.monospace = mkFont cfg.fonts.monospace; })
-            (mkIf (fontSet cfg.fonts.sansSerif) { fonts.sansSerif = mkFont cfg.fonts.sansSerif; })
+            (mkIf (fontSet cfg.fonts.sans-serif) { fonts.sansSerif = mkFont cfg.fonts.sans-serif; })
             (mkIf (fontSet cfg.fonts.serif) { fonts.serif = mkFont cfg.fonts.serif; })
             (mkIf (fontSet cfg.fonts.emoji) { fonts.emoji = mkFont cfg.fonts.emoji; })
 
@@ -511,7 +511,7 @@
               # follows the name); keep the full theme for Plasma/COSMIC resolution.
               (
                 { config, lib, ... }:
-                lib.mkIf cfg.iconTheme.enable {
+                lib.mkIf cfg.icon-theme.enable {
                   gtk.iconTheme.package = lib.mkForce gtkIconsPackage;
                   gtk.iconTheme.name = lib.mkForce "${
                     if config.stylix.polarity == "light" then autoIconsLight else autoIconsDark

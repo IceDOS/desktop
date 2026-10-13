@@ -5,12 +5,12 @@ base16Scheme = ""
 image = ""
 disabledTargets = []
 
-[icedos.desktop.stylix.cursorTheme]
+[icedos.desktop.stylix.cursor-theme]
 name = ""
 package = ""
 size = 0
 
-[icedos.desktop.stylix.iconTheme]
+[icedos.desktop.stylix.icon-theme]
 enable = true
 package = "tela-icon-theme"
 dark = "Tela-black-dark"
@@ -20,7 +20,7 @@ light = "Tela-black"
 package = "adwaita-fonts"
 name = "Adwaita Mono"
 
-[icedos.desktop.stylix.fonts.sansSerif]
+[icedos.desktop.stylix.fonts.sans-serif]
 package = "adwaita-fonts"
 name = "Adwaita Sans"
 
