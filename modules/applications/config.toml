@@ -1,0 +1,43 @@
+# [icedos.desktop.applications.*]
+# name = "" # Desktop-id; empty = unmanaged (DE/apps decide)
+# package = "" # Nixpkgs name; empty = not auto-installed
+
+[icedos.desktop.applications.audio-player]
+name = "io.bassi.Amberol.desktop"
+package = "amberol"
+
+[icedos.desktop.applications.browser]
+name = ""
+package = ""
+
+[icedos.desktop.applications.editor]
+name = ""
+package = ""
+
+[icedos.desktop.applications.files]
+name = ""
+package = ""
+
+[icedos.desktop.applications.archive-manager]
+name = ""
+package = ""
+
+[icedos.desktop.applications.image-viewer]
+name = "org.gnome.Loupe.desktop"
+package = "loupe"
+
+[icedos.desktop.applications.office-suite]
+name = "onlyoffice-desktopeditors.desktop"
+package = "onlyoffice-desktopeditors"
+
+[icedos.desktop.applications.torrent]
+name = "de.haeckerfelix.Fragments.desktop"
+package = "fragments"
+
+[icedos.desktop.applications.video-player]
+name = "io.github.celluloid_player.Celluloid.desktop"
+package = "celluloid"
+
+[icedos.desktop.applications.wine]
+name = "io.github.Faugus.faugus-launcher.desktop"
+package = "faugus-launcher"

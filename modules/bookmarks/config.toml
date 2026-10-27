@@ -1,0 +1,9 @@
+[icedos.desktop.bookmarks]
+extras = []
+documents = true
+downloads = true
+music = true
+pictures = true
+public = true
+templates = true
+videos = true
