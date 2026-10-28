@@ -228,7 +228,27 @@
                 name = "image-viewer";
               }
               {
+                type = "image/bmp";
+                name = "image-viewer";
+              }
+              {
+                type = "image/gif";
+                name = "image-viewer";
+              }
+              {
+                type = "image/heic";
+                name = "image-viewer";
+              }
+              {
+                type = "image/heif";
+                name = "image-viewer";
+              }
+              {
                 type = "image/jpeg";
+                name = "image-viewer";
+              }
+              {
+                type = "image/jxl";
                 name = "image-viewer";
               }
               {
@@ -237,6 +257,18 @@
               }
               {
                 type = "image/svg+xml";
+                name = "image-viewer";
+              }
+              {
+                type = "image/tiff";
+                name = "image-viewer";
+              }
+              {
+                type = "image/vnd.microsoft.icon";
+                name = "image-viewer";
+              }
+              {
+                type = "image/webp";
                 name = "image-viewer";
               }
               {
