@@ -27,8 +27,8 @@ name = "org.gnome.Loupe.desktop"
 package = "loupe"
 
 [icedos.desktop.applications.office-suite]
-name = "onlyoffice-desktopeditors.desktop"
-package = "onlyoffice-desktopeditors"
+name = ""
+package = ""
 
 [icedos.desktop.applications.torrent]
 name = "de.haeckerfelix.Fragments.desktop"
